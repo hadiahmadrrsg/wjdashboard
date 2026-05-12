@@ -76,7 +76,7 @@ select.inp{cursor:pointer;background:#fff}
 <div id="sidebar">
   <div class="logo-row">
     <div class="logo-icon"><svg width="36" height="36" viewBox="0 0 120 120" fill="none"><rect width="120" height="120" fill="#fff"/><path d="M60 16c-8 0-15 4.5-18.5 11.2h37C75 20.5 68 16 60 16z" fill="#EE4D2D"/><path d="M41 26h-1.5c-.5 0-1 .1-1.4.3A27.5 27.5 0 0032 28v.5l3 56c.3 5 4.5 9 9.5 9h31c5 0 9.2-4 9.5-9l3-56V28a27 27 0 00-6-1.7c-.5-.2-1-.3-1.5-.3H79" fill="#EE4D2D"/><path d="M41.5 27.2a3.2 3.2 0 01-.3-1.3 3 3 0 013-3h.3A19 19 0 0160 13a19 19 0 0115.5 9.9h.3a3 3 0 013 3c0 .5-.1.9-.3 1.3" stroke="#EE4D2D" stroke-width="5" fill="none"/><text x="60" y="72" text-anchor="middle" fill="#fff" font-weight="900" font-size="38" font-family="Arial">S</text></svg></div>
-    <div><div class="logo-title">WJ Dashboard</div><div class="logo-sub">Return and Refund</div></div>
+    <div><div class="logo-title">WJ Dashboard</div><div class="logo-sub">Return and Refund</div><div id="sidebar-username" style="font-size:11px;color:#EE4D2D;font-weight:700;margin-top:2px;display:none"></div></div>
   </div>
   <div id="nav-view"></div>
   <div id="nav"></div>
@@ -86,6 +86,16 @@ select.inp{cursor:pointer;background:#fff}
 <div id="main"></div>
 <div id="toast"></div>
 <input type="file" id="file-import" accept=".xlsx,.xls" style="display:none">
+<!-- Username Modal -->
+<div id="username-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:20px;padding:40px 36px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">🧠</div>
+    <h2 style="font-size:22px;font-weight:900;margin-bottom:6px">Who's taking the quiz?</h2>
+    <p style="font-size:14px;color:#6B7280;margin-bottom:24px">Enter your name so your score is saved correctly.</p>
+    <input id="username-input" class="inp" placeholder="Your full name..." style="margin-bottom:16px;font-size:15px;text-align:center" oninput="" onkeydown="if(event.key==='Enter')confirmUsername()">
+    <button class="btn-primary" style="width:100%;padding:14px" onclick="confirmUsername()">Start Quiz →</button>
+  </div>
+</div>
 <script>
 /* ═══ MULTI-VIEW STATE ═══ */
 function mkView(sampleCases,sampleTips,sampleQs,sampleKudos){
@@ -106,29 +116,7 @@ function mkView(sampleCases,sampleTips,sampleQs,sampleKudos){
 const S = {
   view: 'dms',
   tab: 'dashboard',
-  dms: mkView(
-    [{id:"229733868271035",week:"Week 17 — Apr 2026",returnReason:"Parcel not delivered",agent:"Garcia, Maria T.",rcaL1:"Agent Fault",rcaL2:"Agent did not follow the correct SOP",rcaL3:"Incorrect use of SOPA Node",findings:"Agent failed to identify seller as Tada (special handling). Applied standard SOP instead of escalating to BD team.",coaching:"Recheck seller name or follow SOPA suggestion. Verify seller name for virtual goods.",painPoint:"Failure to identify special seller type → incorrect SOP.",keyLesson:"Always check the seller name before applying any SOP."},
-     {id:"230056327223703",week:"Week 17 — Apr 2026",returnReason:"Missing part of the order",agent:"Santos, John P.",rcaL1:"Agent Fault",rcaL2:"Agent unable to identify user issue",rcaL3:"Misunderstanding user's issue",findings:"Agent misread buyer's issue as missing 'the box' only. Buyer was missing the entire variant item.",coaching:"Validate variant item bought vs buyer's remark. Use translator if needed.",painPoint:"Failure to interpret item fulfillment scenario → wrong resolution.",keyLesson:"Read buyer remarks in full and cross-check variant details."},
-     {id:"230144509207430",week:"Week 18 — Apr 2026",returnReason:"Seller sent wrong item",agent:"Arguelles, Leonel M.",rcaL1:"Agent Fault",rcaL2:"Agent did not assess evidence correctly",rcaL3:"Evidence validity not verified",findings:"Agent cancelled valid R&R. Evidence clearly showed wrong size (XL vs Large). Asked for unnecessary measurements.",coaching:"Read remarks fully and cross-check evidence before acting.",painPoint:"Incorrect rejection of valid claim.",keyLesson:"If evidence answers the question, don't request more."},
-     {id:"230050121210112",week:"Week 18 — Apr 2026",returnReason:"Product significantly different",agent:"Arguelles, Leonel M.",rcaL1:"Agent Fault",rcaL2:"Agent unable to identify user issue",rcaL3:"Misunderstanding user's issue",findings:"Agent rejected seller compensation. Buyer's claim was change of mind (auto-refunded). Seller should have been compensated.",coaching:"",painPoint:"Failure to validate sufficient evidence.",keyLesson:"Change of mind ≠ seller fault. Don't penalise sellers wrongly."},
-     {id:"230199001234567",week:"Week 19 — May 2026",returnReason:"Item not as described",agent:"Reyes, Ana C.",rcaL1:"Agent Fault",rcaL2:"Agent did not follow the correct SOP",rcaL3:"Incorrect use of SOPA Node",findings:"Agent approved full refund without checking virtual good category.",coaching:"Check item category before applying refund SOP.",painPoint:"Applied physical goods SOP to virtual item.",keyLesson:"Verify item type (physical vs virtual) before choosing SOP."},
-     {id:"230201009876543",week:"Week 19 — May 2026",returnReason:"Defective product",agent:"Cruz, Paolo D.",rcaL1:"Agent Fault",rcaL2:"Agent did not assess evidence correctly",rcaL3:"Evidence validity not verified",findings:"Agent requested additional photos instead of accepting video evidence of defect.",coaching:"Video of malfunction is sufficient proof.",painPoint:"Unnecessary evidence request when video was conclusive.",keyLesson:"Video evidence of defect is conclusive."}],
-    [{id:1,title:"Seller Name Check",tip:"Before applying any SOP, always verify the seller name. Tada, LazMall require different escalation.",category:"SOP",date:"Apr 28, 2026",week:"Week 17 — Apr 2026"},
-     {id:2,title:"Evidence Is Enough?",tip:"If the buyer's photo/video shows the issue clearly, do NOT ask for additional evidence.",category:"Evidence",date:"Apr 25, 2026",week:"Week 17 — Apr 2026"},
-     {id:3,title:"Read Remarks Fully",tip:"'Missing box' vs 'missing the item with box' are completely different claims.",category:"Process",date:"Apr 22, 2026",week:"Week 18 — Apr 2026"},
-     {id:4,title:"Virtual Goods SOP",tip:"Virtual goods follow a different return policy. Check item category first.",category:"SOP",date:"May 1, 2026",week:"Week 19 — May 2026"},
-     {id:5,title:"Video = Conclusive",tip:"Video showing a defect is conclusive. Do not request additional photos.",category:"Evidence",date:"May 2, 2026",week:"Week 19 — May 2026"}],
-    [{q:"Buyer reports missing variant '1945-with box'. Agent thinks only box missing. What to do?",opts:["Offer $5 partial refund","Check variant details to confirm","Ask buyer for photos","Reject the claim"],ans:1,week:"Week 17 — Apr 2026"},
-     {q:"Seller is 'TADA Official Store'. What should agent do first?",opts:["Apply standard SOP","Escalate to BD team — Tada is special handling","Ask seller for packing evidence","Reject buyer's claim"],ans:1,week:"Week 17 — Apr 2026"},
-     {q:"Buyer received XL instead of Large. Size tag confirms. What to do?",opts:["Request measurements","Accept return — evidence sufficient","Ask seller to verify","Cancel return"],ans:1,week:"Week 18 — Apr 2026"},
-     {q:"Buyer auto-refunded for change-of-mind. Seller disputes. What to do?",opts:["Reject seller compensation","Compensate seller — was change of mind","Ask buyer to return item","Request packing evidence"],ans:1,week:"Week 18 — Apr 2026"}],
-    [{id:1,name:"Dela Cruz, Ana",score:"98%",achievement:"Zero WJ for 4 weeks",week:"Week 19 — May 2026",team:"Vads"},
-     {id:2,name:"Reyes, Marco",score:"96%",achievement:"Highest QA in April",week:"Week 18 — Apr 2026",team:"ePerformax"},
-     {id:3,name:"Santos, Maria",score:"95%",achievement:"Perfect Week 17 audit",week:"Week 17 — Apr 2026",team:"Vads"},
-     {id:4,name:"Cruz, Paolo",score:"94%",achievement:"No WJ for 3 weeks",week:"Week 18 — Apr 2026",team:"ePerformax"},
-     {id:5,name:"Lim, James",score:"93%",achievement:"Most improved agent",week:"Week 19 — May 2026",team:"Vads"},
-     {id:6,name:"Garcia, Ria",score:"92%",achievement:"Consistent top scorer",week:"Week 19 — May 2026",team:"ePerformax"}]
-  ),
+  dms: mkView([],[],[],[]),
   l2rr: mkView([],[],[],[]),
   p1: mkView([],[],[],[]),
 };
@@ -146,7 +134,65 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v12';
+const VER='v13';
+
+/* ═══ USERNAME ═══ */
+var _currentUsername = '';
+function loadUsername(){
+  try{ _currentUsername = localStorage.getItem('wj_username')||''; }catch(e){}
+  updateSidebarUsername();
+}
+function updateSidebarUsername(){
+  const el = document.getElementById('sidebar-username');
+  if(el){ if(_currentUsername){ el.textContent='👤 '+_currentUsername; el.style.display='block'; } else { el.style.display='none'; } }
+}
+function showUsernameModal(pendingWeek){
+  const modal = document.getElementById('username-modal');
+  if(modal){ modal.style.display='flex'; modal._pendingWeek=pendingWeek||''; }
+  setTimeout(()=>{ const inp=document.getElementById('username-input'); if(inp){ inp.value=_currentUsername||''; inp.focus(); } },50);
+}
+function confirmUsername(){
+  const inp = document.getElementById('username-input');
+  const name = (inp?inp.value:'').trim();
+  if(!name){ inp&&inp.focus(); return; }
+  _currentUsername = name;
+  try{ localStorage.setItem('wj_username', name); }catch(e){}
+  updateSidebarUsername();
+  const modal = document.getElementById('username-modal');
+  const pendingWeek = modal?modal._pendingWeek:'';
+  if(modal) modal.style.display='none';
+  _doStartQuiz(pendingWeek);
+}
+
+/* ═══ SHARED STORAGE (window.storage API) ═══ */
+async function saveShared(view, field, data){
+  try{ await window.storage.set('wj:'+view+':'+field, JSON.stringify(data), true); }catch(e){ console.warn('Storage save failed',e); }
+}
+async function loadShared(view, field){
+  try{ const r = await window.storage.get('wj:'+view+':'+field, true); return r?JSON.parse(r.value):null; }catch(e){ return null; }
+}
+async function loadAllShared(){
+  const views=['dms','l2rr','p1'];
+  const fields=['cases','tips','customQs','kudos','reminder'];
+  for(const v of views){
+    for(const f of fields){
+      const val = await loadShared(v,f);
+      if(val!==null){ if(f==='reminder'){ S[v].reminder=val; } else { S[v][f]=val; } }
+    }
+  }
+  render();
+}
+/* Auto-save whenever data changes */
+function autoSave(viewKey){
+  const d=S[viewKey];
+  saveShared(viewKey,'cases',d.cases);
+  saveShared(viewKey,'tips',d.tips);
+  saveShared(viewKey,'customQs',d.customQs);
+  saveShared(viewKey,'kudos',d.kudos);
+  saveShared(viewKey,'reminder',d.reminder);
+}
+/* Patch render to trigger autosave */
+const _origRender = typeof render !== 'undefined' ? render : null;
 const viewColors={dms:'#EE4D2D',l2rr:'#2563EB',p1:'#7C3AED'};
 const viewNames={dms:'DMS',l2rr:'L2RR',p1:'P1'};
 
@@ -202,6 +248,7 @@ function render(){renderNav();const m=$('main');const st=m.scrollTop;const d=V()
   }
   if(tabChanged){m.scrollTop=0;m.firstElementChild&&m.firstElementChild.classList.add('fadeUp');}
   else{m.scrollTop=st;}
+  autoSave(S.view);
 }
 
 /* ═══ DASHBOARD ═══ */
@@ -325,7 +372,11 @@ function rQuizHome(){const d=V();const aw=uv(d.cases,'week');
     </div>`;}).join('')}
   ${!aw.length?'<div class="card text-center" style="padding:30px;color:#6B7280">No cases yet. Import data to generate quizzes.</div>':''}
   </div>`;}
-function startQuiz(wf){const d=V();let qs=[];
+function startQuiz(wf){
+  if(!_currentUsername){ showUsernameModal(wf); return; }
+  _doStartQuiz(wf);
+}
+function _doStartQuiz(wf){const d=V();let qs=[];
   const fc=wf?d.customQs.filter(q=>q.week===wf):d.customQs;const fca=wf?d.cases.filter(c=>c.week===wf):d.cases;
   fc.forEach(cq=>{if(cq.q&&cq.opts.filter(Boolean).length>=2)qs.push({q:cq.q,opts:cq.opts.filter(Boolean),ans:cq.opts[cq.ans]||cq.opts[0],week:cq.week});});
   if(qs.length<4&&fca.length>=2){fca.slice(0,8-qs.length).forEach((c,i)=>{const ot=d.cases.filter((_,j)=>j!==i);const wr=ot.slice(0,2).map(o=>o.keyLesson||o.painPoint);
@@ -334,7 +385,7 @@ function startQuiz(wf){const d=V();let qs=[];
   qs=qs.map(q=>({...q,opts:shuffle(q.opts)}));d.qList=qs;d.quiz={on:true,i:0,ans:[],score:0,done:false,wf:wf||''};render();}
 function answerQuiz(oi){const d=V();const q=d.quiz;if(q.ans.length>q.i)return;const o=d.qList[q.i].opts[oi];const ok=o===d.qList[q.i].ans;
   q.ans.push({sel:o,ok,week:d.qList[q.i].week});q.score+=(ok?1:0);const last=q.i>=d.qList.length-1;
-  if(last){q.done=true;if(q.wf)d.completedWeeks[q.wf]=true;d.scores.unshift({date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),score:q.score,total:d.qList.length,pct:Math.round(q.score/d.qList.length*100),details:d.qList.map((qq,idx)=>{const a=q.ans[idx]||{};return{q:qq.q,correct:qq.ans,selected:a.sel,ok:a.ok,week:qq.week};})});saveScores();}else{q.i++;}render();}
+  if(last){q.done=true;if(q.wf)d.completedWeeks[q.wf]=true;d.scores.unshift({date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),score:q.score,total:d.qList.length,pct:Math.round(q.score/d.qList.length*100),username:_currentUsername||'Unknown',details:d.qList.map((qq,idx)=>{const a=q.ans[idx]||{};return{q:qq.q,correct:qq.ans,selected:a.sel,ok:a.ok,week:qq.week};})});saveScores();}else{q.i++;}render();}
 function rQuizActive(){const d=V();const q=d.quiz;const cur=d.qList[q.i];const ans=q.ans.length>q.i;
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">🧠 Quiz</h1>
   <div class="flex-c mb16"><button class="btn-outline" style="padding:8px 16px" onclick="V().quiz={on:false,i:0,ans:[],score:0,done:false};render()">🏠 Home</button>${q.i>0?'<button class="btn-outline" style="padding:8px 16px" onclick="V().quiz.i--;render()">← Back</button>':''}</div>
@@ -363,7 +414,7 @@ function rScores(){const d=V();
   </div>
   ${d.scores.map((s,i)=>{const ex=d.expandedScore===i;const co=s.pct>=80?'#059669':s.pct>=50?'#D97706':'#DC2626';const bg=s.pct>=80?'#ECFDF5':s.pct>=50?'#FFFBEB':'#FEF2F2';
     return `<div class="card card-hover pointer" style="padding:16px 22px;margin-bottom:${ex?0:12}px;${ex?'border-radius:16px 16px 0 0':''}" onclick="V().expandedScore=${ex?'null':i};render()">
-    <div style="display:flex;align-items:center;gap:16px"><div style="width:42px;height:42px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:${co};flex-shrink:0">${s.pct}%</div><div style="flex:1"><div style="font-size:14px;font-weight:700">${s.score}/${s.total}</div><div style="font-size:12px;color:#6B7280">${esc(s.date)}</div></div>${badge(s.pct>=80?'Excellent':s.pct>=50?'Good':'Review',co,bg)}<span style="font-size:14px;color:#6B7280;transform:rotate(${ex?180:0}deg)">▼</span></div></div>
+    <div style="display:flex;align-items:center;gap:16px"><div style="width:42px;height:42px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:${co};flex-shrink:0">${s.pct}%</div><div style="flex:1"><div style="font-size:14px;font-weight:700">${s.score}/${s.total} ${s.username?'<span style="font-size:12px;color:#6B7280;font-weight:600">· '+esc(s.username)+'</span>':''}</div><div style="font-size:12px;color:#6B7280">${esc(s.date)}</div></div>${badge(s.pct>=80?'Excellent':s.pct>=50?'Good':'Review',co,bg)}<span style="font-size:14px;color:#6B7280;transform:rotate(${ex?180:0}deg)">▼</span></div></div>
     ${ex&&s.details?`<div class="score-detail">${(()=>{const g={};s.details.forEach(d=>{const w=d.week||'General';if(!g[w])g[w]=[];g[w].push(d);});return Object.entries(g).map(([w,ds])=>`<div style="margin:10px 0 8px">${badge(w,'#EE4D2D','#FFF5F2')}</div>${ds.map(d=>`<div style="padding:14px 18px;margin-bottom:8px;border-radius:12px;background:${d.ok?'#ECFDF5':'#FEF2F2'};border-left:4px solid ${d.ok?'#059669':'#DC2626'}">
 <div style="font-size:13px;font-weight:700;color:${d.ok?'#059669':'#DC2626'};margin-bottom:6px">${d.ok?'✓ CORRECT':'✗ WRONG'}</div>
 <div style="font-size:13px;line-height:1.7;margin-bottom:8px;color:#1A1A1A"><b>Q:</b> ${esc(d.q)}</div>
@@ -496,11 +547,17 @@ function exportData(target){const d=V();var data,fn;
   var ws=XLSX.utils.json_to_sheet(data);var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Sheet1');XLSX.writeFile(wb,fn);toast('Exported '+fn);}
 
 loadScores();
+loadUsername();
 _fileCallbacks['nc-img']=function(d){V()._ncImgData=d;};
 _fileCallbacks['nc-vid']=function(d){V()._ncVidData=d;};
 _fileCallbacks['nt-img']=function(d){V()._ntImgData=d;};
 _fileCallbacks['nt-vid']=function(d){V()._ntVidData=d;};
-render();
+/* Load shared data then render */
+if(typeof window.storage !== 'undefined'){
+  loadAllShared().catch(()=>render());
+} else {
+  render();
+}
 </script>
 </body>
 </html>
