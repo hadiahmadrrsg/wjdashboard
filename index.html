@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v12</title>
+<title>WJ Dashboard v14</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -82,6 +82,10 @@ select.inp{cursor:pointer;background:#fff}
   <div id="nav"></div>
   <div style="flex:1"></div>
   <div id="nav-admin"></div>
+  <div id="fb-status" style="margin-top:8px;padding:8px 12px;border-radius:10px;font-size:11px;font-weight:700;background:#FEF3C7;color:#D97706;display:flex;align-items:center;gap:6px">
+    <span style="width:7px;height:7px;border-radius:50%;background:#D97706;flex-shrink:0;display:inline-block"></span>
+    <span id="fb-status-text">Connecting…</span>
+  </div>
 </div>
 <div id="main"></div>
 <div id="toast"></div>
@@ -134,7 +138,7 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v13';
+const VER='v14';
 
 /* ═══ USERNAME ═══ */
 var _currentUsername = '';
@@ -164,35 +168,142 @@ function confirmUsername(){
   _doStartQuiz(pendingWeek);
 }
 
-/* ═══ SHARED STORAGE (window.storage API) ═══ */
-async function saveShared(view, field, data){
-  try{ await window.storage.set('wj:'+view+':'+field, JSON.stringify(data), true); }catch(e){ console.warn('Storage save failed',e); }
+/* ═══ FIREBASE CONFIG — REPLACE WITH YOUR OWN ═══
+   Steps:
+   1. Go to https://console.firebase.google.com
+   2. Create a project → Add a web app → copy the firebaseConfig object
+   3. Go to Realtime Database → Create database → Start in TEST MODE
+   4. Paste your values below
+   ════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyAB8uxu0TQlrV0LBvH7-FgWFsKxPni5Qv8",
+  authDomain:        "wj-dashboard.firebaseapp.com",
+  databaseURL:       "Phttps://wj-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "wj-dashboard",
+  storageBucket:     "wj-dashboard.firebasestorage.app",
+  messagingSenderId: "653380094253",
+  appId:             "1:653380094253:web:e2ebc39383505a1ffbaba4"
+};
+
+/* ═══ FIREBASE ENGINE ═══ */
+var _fbReady = false;
+var _fbDB = null;
+var _fbListeners = {}; // active realtime listeners
+
+function fbConfigured(){
+  return FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('PASTE_YOUR');
 }
-async function loadShared(view, field){
-  try{ const r = await window.storage.get('wj:'+view+':'+field, true); return r?JSON.parse(r.value):null; }catch(e){ return null; }
+
+function fbStatus(state){
+  const el=document.getElementById('fb-status');
+  const txt=document.getElementById('fb-status-text');
+  if(!el||!txt)return;
+  const map={ok:['#ECFDF5','#059669','🟢 Synced'],err:['#FEF2F2','#DC2626','🔴 Not connected'],warn:['#FEF3C7','#D97706','🟡 Connecting…'],local:['#F3F4F6','#6B7280','⚫ Local only']};
+  const [bg,col,label]=map[state]||map.warn;
+  el.style.background=bg;el.style.color=col;txt.textContent=label;
+  el.querySelector('span').style.background=col;
 }
-async function loadAllShared(){
-  const views=['dms','l2rr','p1'];
-  const fields=['cases','tips','customQs','kudos','reminder'];
-  for(const v of views){
-    for(const f of fields){
-      const val = await loadShared(v,f);
-      if(val!==null){ if(f==='reminder'){ S[v].reminder=val; } else { S[v][f]=val; } }
-    }
+
+function initFirebase(){
+  if(!fbConfigured()){
+    console.warn('Firebase not configured — running in local-only mode.');
+    fbStatus('local');
+    render();
+    return;
   }
-  render();
+  // Dynamically load Firebase SDK (compat v9)
+  const sdks = [
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js'
+  ];
+  let loaded = 0;
+  sdks.forEach(src => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => { loaded++; if(loaded === sdks.length) onFirebaseLoaded(); };
+    s.onerror = () => { console.error('Failed to load Firebase SDK'); render(); };
+    document.head.appendChild(s);
+  });
 }
-/* Auto-save whenever data changes */
+
+function onFirebaseLoaded(){
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    _fbDB = firebase.database();
+    _fbReady = true;
+    fbStatus('warn');
+    loadAllFromFirebase();
+  }catch(e){
+    console.error('Firebase init error:', e);
+    fbStatus('err');
+    render();
+  }
+}
+
+function fbPath(view, field){
+  return 'wjdashboard/' + view + '/' + field;
+}
+
+/* Load all views from Firebase, then subscribe to live updates */
+function loadAllFromFirebase(){
+  const views = ['dms','l2rr','p1'];
+  const fields = ['cases','tips','customQs','kudos','reminder'];
+  let pending = views.length * fields.length;
+
+  views.forEach(v => {
+    fields.forEach(f => {
+      const ref = _fbDB.ref(fbPath(v, f));
+      // One-time read first to hydrate state
+      ref.once('value', snap => {
+        const val = snap.val();
+        if(val !== null){
+          if(f === 'reminder'){ S[v].reminder = val; }
+          else { S[v][f] = Array.isArray(val) ? val : Object.values(val || {}); }
+        }
+        pending--;
+        if(pending === 0){ render(); fbStatus('ok'); subscribeAll(); }
+      }, () => { pending--; if(pending===0){ render(); fbStatus('ok'); subscribeAll(); } });
+    });
+  });
+}
+
+/* Live listeners — update state & re-render when another user changes data */
+function subscribeAll(){
+  const views = ['dms','l2rr','p1'];
+  const fields = ['cases','tips','customQs','kudos','reminder'];
+  views.forEach(v => {
+    fields.forEach(f => {
+      const key = v+':'+f;
+      if(_fbListeners[key]) return; // already subscribed
+      const ref = _fbDB.ref(fbPath(v, f));
+      _fbListeners[key] = ref.on('value', snap => {
+        const val = snap.val();
+        if(f === 'reminder'){ S[v].reminder = val || S[v].reminder; }
+        else { S[v][f] = val ? (Array.isArray(val) ? val : Object.values(val)) : []; }
+        render();
+      });
+    });
+  });
+}
+
+/* Save a single field to Firebase */
+function saveToFirebase(viewKey, field){
+  if(!_fbReady) return;
+  const d = S[viewKey];
+  const val = field === 'reminder' ? d.reminder : d[field];
+  _fbDB.ref(fbPath(viewKey, field)).set(val).catch(e => console.warn('Firebase write error:', e));
+}
+
+/* Auto-save on every render — only changed view's data */
+var _saveDebounce = {};
 function autoSave(viewKey){
-  const d=S[viewKey];
-  saveShared(viewKey,'cases',d.cases);
-  saveShared(viewKey,'tips',d.tips);
-  saveShared(viewKey,'customQs',d.customQs);
-  saveShared(viewKey,'kudos',d.kudos);
-  saveShared(viewKey,'reminder',d.reminder);
+  if(!_fbReady) return;
+  // Debounce 600ms to avoid writes on every keystroke
+  clearTimeout(_saveDebounce[viewKey]);
+  _saveDebounce[viewKey] = setTimeout(() => {
+    ['cases','tips','customQs','kudos','reminder'].forEach(f => saveToFirebase(viewKey, f));
+  }, 600);
 }
-/* Patch render to trigger autosave */
-const _origRender = typeof render !== 'undefined' ? render : null;
 const viewColors={dms:'#EE4D2D',l2rr:'#2563EB',p1:'#7C3AED'};
 const viewNames={dms:'DMS',l2rr:'L2RR',p1:'P1'};
 
@@ -552,12 +663,8 @@ _fileCallbacks['nc-img']=function(d){V()._ncImgData=d;};
 _fileCallbacks['nc-vid']=function(d){V()._ncVidData=d;};
 _fileCallbacks['nt-img']=function(d){V()._ntImgData=d;};
 _fileCallbacks['nt-vid']=function(d){V()._ntVidData=d;};
-/* Load shared data then render */
-if(typeof window.storage !== 'undefined'){
-  loadAllShared().catch(()=>render());
-} else {
-  render();
-}
+/* Init Firebase — loads all shared data, then renders */
+initFirebase();
 </script>
 </body>
 </html>
