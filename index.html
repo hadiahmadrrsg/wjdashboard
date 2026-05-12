@@ -95,8 +95,12 @@ select.inp{cursor:pointer;background:#fff}
   <div style="background:#fff;border-radius:20px;padding:40px 36px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center">
     <div style="font-size:48px;margin-bottom:12px">🧠</div>
     <h2 style="font-size:22px;font-weight:900;margin-bottom:6px">Who's taking the quiz?</h2>
-    <p style="font-size:14px;color:#6B7280;margin-bottom:24px">Enter your name so your score is saved correctly.</p>
-    <input id="username-input" class="inp" placeholder="Your full name..." style="margin-bottom:16px;font-size:15px;text-align:center" oninput="" onkeydown="if(event.key==='Enter')confirmUsername()">
+    <p style="font-size:14px;color:#6B7280;margin-bottom:20px">Enter your details so your score is saved correctly.</p>
+    <input id="username-input" class="inp" placeholder="Your full name..." style="margin-bottom:12px;font-size:15px;text-align:center" onkeydown="if(event.key==='Enter')confirmUsername()">
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      <button id="bpo-vads" onclick="selectBPO('Vads')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Vads</button>
+      <button id="bpo-ep" onclick="selectBPO('ePerformax')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">ePerformax</button>
+    </div>
     <button class="btn-primary" style="width:100%;padding:14px" onclick="confirmUsername()">Start Quiz →</button>
   </div>
 </div>
@@ -138,29 +142,60 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v15';
+const VER='v17';
 
-/* ═══ USERNAME ═══ */
+/* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
+var _currentBPO = '';
+
 function loadUsername(){
-  try{ _currentUsername = localStorage.getItem('wj_username')||''; }catch(e){}
+  try{
+    _currentUsername = localStorage.getItem('wj_username')||'';
+    _currentBPO = localStorage.getItem('wj_bpo')||'';
+  }catch(e){}
   updateSidebarUsername();
 }
+
 function updateSidebarUsername(){
   const el = document.getElementById('sidebar-username');
-  if(el){ if(_currentUsername){ el.textContent='👤 '+_currentUsername; el.style.display='block'; } else { el.style.display='none'; } }
+  if(!el) return;
+  if(_currentUsername){
+    const bpoColor = _currentBPO==='Vads'?'#EE4D2D':_currentBPO==='ePerformax'?'#2563EB':'#6B7280';
+    el.innerHTML = '👤 '+esc(_currentUsername)+(_currentBPO?` <span style="background:${bpoColor};color:#fff;padding:1px 7px;border-radius:6px;font-size:10px;margin-left:4px">${esc(_currentBPO)}</span>`:'');
+    el.style.display='block';
+  } else {
+    el.style.display='none';
+  }
 }
+
+function selectBPO(bpo){
+  _currentBPO = bpo;
+  const vEl=document.getElementById('bpo-vads');
+  const eEl=document.getElementById('bpo-ep');
+  if(vEl) vEl.style.cssText += bpo==='Vads'?';border-color:#EE4D2D;background:#FFF5F2;color:#EE4D2D':';border-color:#E5E7EB;background:#fff;color:#6B7280';
+  if(eEl) eEl.style.cssText += bpo==='ePerformax'?';border-color:#2563EB;background:#EFF6FF;color:#2563EB':';border-color:#E5E7EB;background:#fff;color:#6B7280';
+}
+
 function showUsernameModal(pendingWeek){
   const modal = document.getElementById('username-modal');
   if(modal){ modal.style.display='flex'; modal._pendingWeek=pendingWeek||''; }
-  setTimeout(()=>{ const inp=document.getElementById('username-input'); if(inp){ inp.value=_currentUsername||''; inp.focus(); } },50);
+  setTimeout(()=>{
+    const inp=document.getElementById('username-input');
+    if(inp){ inp.value=_currentUsername||''; inp.focus(); }
+    if(_currentBPO) selectBPO(_currentBPO);
+  },50);
 }
+
 function confirmUsername(){
   const inp = document.getElementById('username-input');
   const name = (inp?inp.value:'').trim();
-  if(!name){ inp&&inp.focus(); return; }
+  if(!name){ inp&&inp.focus(); toast('Please enter your name','error'); return; }
+  if(!_currentBPO){ toast('Please select your BPO','error'); return; }
   _currentUsername = name;
-  try{ localStorage.setItem('wj_username', name); }catch(e){}
+  try{
+    localStorage.setItem('wj_username', name);
+    localStorage.setItem('wj_bpo', _currentBPO);
+  }catch(e){}
   updateSidebarUsername();
   const modal = document.getElementById('username-modal');
   const pendingWeek = modal?modal._pendingWeek:'';
@@ -504,7 +539,7 @@ function _doStartQuiz(wf){const d=V();let qs=[];
   qs=qs.map(q=>({...q,opts:shuffle(q.opts)}));d.qList=qs;d.quiz={on:true,i:0,ans:[],score:0,done:false,wf:wf||''};render();}
 function answerQuiz(oi){const d=V();const q=d.quiz;if(q.ans.length>q.i)return;const o=d.qList[q.i].opts[oi];const ok=o===d.qList[q.i].ans;
   q.ans.push({sel:o,ok,week:d.qList[q.i].week});q.score+=(ok?1:0);const last=q.i>=d.qList.length-1;
-  if(last){q.done=true;if(q.wf)d.completedWeeks[q.wf]=true;d.scores.unshift({date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),score:q.score,total:d.qList.length,pct:Math.round(q.score/d.qList.length*100),username:_currentUsername||'Unknown',details:d.qList.map((qq,idx)=>{const a=q.ans[idx]||{};return{q:qq.q,correct:qq.ans,selected:a.sel,ok:a.ok,week:qq.week};})});saveScores();}else{q.i++;}render();}
+  if(last){q.done=true;if(q.wf)d.completedWeeks[q.wf]=true;d.scores.unshift({date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),score:q.score,total:d.qList.length,pct:Math.round(q.score/d.qList.length*100),username:_currentUsername||'Unknown',bpo:_currentBPO||'',details:d.qList.map((qq,idx)=>{const a=q.ans[idx]||{};return{q:qq.q,correct:qq.ans,selected:a.sel,ok:a.ok,week:qq.week};})});saveScores();}else{q.i++;}render();}
 function rQuizActive(){const d=V();const q=d.quiz;const cur=d.qList[q.i];const ans=q.ans.length>q.i;
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">🧠 Quiz</h1>
   <div class="flex-c mb16"><button class="btn-outline" style="padding:8px 16px" onclick="V().quiz={on:false,i:0,ans:[],score:0,done:false};render()">🏠 Home</button>${q.i>0?'<button class="btn-outline" style="padding:8px 16px" onclick="V().quiz.i--;render()">← Back</button>':''}</div>
@@ -521,13 +556,9 @@ function rQuizDone(){const d=V();const q=d.quiz;const p=Math.round(q.score/d.qLi
   <button class="btn-outline" style="margin-top:16px" onclick="V().quiz={on:false,i:0,ans:[],score:0,done:false};render()">🏠 Home</button></div></div>`;}
 
 /* ═══ SCORES ═══ */
-function rScores(){const d=V();
-  if(!d.scores.length)return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">📝 Quiz Scores</h1><div class="card text-center" style="padding:40px"><div style="font-size:56px;margin-bottom:12px">📝</div><h3 style="font-weight:800;margin-bottom:8px">No attempts yet</h3><button class="btn-primary" onclick="switchTab('quiz')" style="margin-top:16px">Go to Quiz</button></div></div>`;
-  const tc=d.scores.reduce((a,s)=>a+s.score,0);const te=d.scores.reduce((a,s)=>a+(s.total-s.score),0);const b=Math.max(...d.scores.map(s=>s.pct));const av=Math.round(d.scores.reduce((a,s)=>a+s.pct,0)/d.scores.length);
-
-  /* Build top 3 — best score per unique username */
+function buildPodium(scores, bpoName, accentColor, accentBg){
   const bestByUser={};
-  d.scores.forEach(s=>{
+  scores.filter(s=>(s.bpo||'')=== bpoName).forEach(s=>{
     const u=s.username||'Unknown';
     if(!bestByUser[u]||s.pct>bestByUser[u].pct) bestByUser[u]={...s,username:u};
   });
@@ -535,29 +566,53 @@ function rScores(){const d=V();
   const medals=['🥇','🥈','🥉'];
   const podiumColors=['#D97706','#6B7280','#B45309'];
   const podiumBgs=['linear-gradient(135deg,#FDE68A,#FCD34D)','linear-gradient(135deg,#E5E7EB,#D1D5DB)','linear-gradient(135deg,#FCD9A0,#F59E0B)'];
-  const heights=[110,80,65];
-  const order=[1,0,2]; // podium order: 2nd, 1st, 3rd
+  const heights=[100,130,80];
+  const order=[1,0,2];
 
-  const podiumHTML = top3.length ? `<div class="card" style="padding:24px;margin-bottom:20px">
-    <h3 style="font-size:17px;font-weight:800;margin-bottom:20px">🏆 Top Performers — All-Time Best</h3>
-    <div style="display:flex;justify-content:center;align-items:flex-end;gap:16px;padding:10px 0 4px">
-      ${order.map(p=>{
-        const k=top3[p];
-        if(!k)return `<div style="width:110px"></div>`;
-        const h=heights[p===1?0:p===0?1:2];
-        return `<div style="display:flex;flex-direction:column;align-items:center;width:110px">
-          <div style="font-size:${p===0?30:24}px;margin-bottom:6px">${medals[p]}</div>
-          <div style="font-size:13px;font-weight:800;text-align:center;margin-bottom:2px;line-height:1.3">${esc(k.username)}</div>
-          <div style="font-size:20px;font-weight:900;color:${podiumColors[p]};margin-bottom:6px">${k.pct}%</div>
-          <div style="font-size:10px;color:#6B7280;margin-bottom:8px">${k.score}/${k.total}</div>
-          <div style="width:100%;height:${h}px;border-radius:12px 12px 0 0;background:${podiumBgs[p]};display:flex;align-items:center;justify-content:center">
-            <span style="font-size:28px;font-weight:900;color:rgba(0,0,0,.15)">${p+1}</span>
-          </div>
-        </div>`;
-      }).join('')}
+  const podiumSlots = order.map(p=>{
+    const k=top3[p];
+    const h=heights[p===1?0:p===0?1:2];
+    if(!k) return `<div style="display:flex;flex-direction:column;align-items:center;width:96px">
+      <div style="font-size:${p===0?26:20}px;margin-bottom:6px">${medals[p]}</div>
+      <div style="font-size:12px;color:#D1D5DB;font-weight:700;margin-bottom:6px">—</div>
+      <div style="width:100%;height:${h}px;border-radius:10px 10px 0 0;background:#F3F4F6;display:flex;align-items:center;justify-content:center">
+        <span style="font-size:24px;font-weight:900;color:#E5E7EB">${p+1}</span>
+      </div></div>`;
+    return `<div style="display:flex;flex-direction:column;align-items:center;width:96px">
+      <div style="font-size:${p===0?26:20}px;margin-bottom:4px">${medals[p]}</div>
+      <div style="font-size:12px;font-weight:800;text-align:center;line-height:1.3;margin-bottom:2px">${esc(k.username)}</div>
+      <div style="font-size:18px;font-weight:900;color:${podiumColors[p]};margin-bottom:2px">${k.pct}%</div>
+      <div style="font-size:10px;color:#6B7280;margin-bottom:6px">${k.score}/${k.total}</div>
+      <div style="width:100%;height:${h}px;border-radius:10px 10px 0 0;background:${podiumBgs[p]};display:flex;align-items:center;justify-content:center">
+        <span style="font-size:22px;font-weight:900;color:rgba(0,0,0,.12)">${p+1}</span>
+      </div></div>`;
+  }).join('');
+
+  const spotsLeft = 3 - top3.length;
+  return `<div style="flex:1;min-width:0">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${accentColor};flex-shrink:0"></div>
+      <span style="font-size:15px;font-weight:900;color:${accentColor}">${esc(bpoName)}</span>
     </div>
-    ${top3.length>3?'':top3.length<3?`<p style="font-size:12px;color:#6B7280;text-align:center;margin-top:12px">${3-top3.length} more spot${3-top3.length!==1?'s':''} open — keep quizzing!</p>`:''}
-  </div>` : '';
+    <div style="display:flex;justify-content:center;align-items:flex-end;gap:10px;padding:4px 0">
+      ${podiumSlots}
+    </div>
+    ${spotsLeft>0?`<p style="font-size:11px;color:#9CA3AF;text-align:center;margin-top:8px">${spotsLeft} spot${spotsLeft!==1?'s':''} open</p>`:''}
+  </div>`;
+}
+
+function rScores(){const d=V();
+  if(!d.scores.length)return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">📝 Quiz Scores</h1><div class="card text-center" style="padding:40px"><div style="font-size:56px;margin-bottom:12px">📝</div><h3 style="font-weight:800;margin-bottom:8px">No attempts yet</h3><button class="btn-primary" onclick="switchTab('quiz')" style="margin-top:16px">Go to Quiz</button></div></div>`;
+  const tc=d.scores.reduce((a,s)=>a+s.score,0);const te=d.scores.reduce((a,s)=>a+(s.total-s.score),0);const b=Math.max(...d.scores.map(s=>s.pct));const av=Math.round(d.scores.reduce((a,s)=>a+s.pct,0)/d.scores.length);
+
+  const podiumHTML = `<div class="card" style="padding:24px;margin-bottom:20px">
+    <h3 style="font-size:17px;font-weight:800;margin-bottom:20px">🏆 Top 3 — By BPO</h3>
+    <div style="display:flex;gap:24px;align-items:flex-end">
+      ${buildPodium(d.scores,'Vads','#EE4D2D','#FFF5F2')}
+      <div style="width:1px;background:#E5E7EB;align-self:stretch;flex-shrink:0"></div>
+      ${buildPodium(d.scores,'ePerformax','#2563EB','#EFF6FF')}
+    </div>
+  </div>`;
 
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">📝 Quiz Scores</h1>
   ${podiumHTML}
@@ -570,7 +625,7 @@ function rScores(){const d=V();
   <h3 style="font-size:15px;font-weight:800;margin-bottom:12px">📋 All Attempts</h3>
   ${d.scores.map((s,i)=>{const ex=d.expandedScore===i;const co=s.pct>=80?'#059669':s.pct>=50?'#D97706':'#DC2626';const bg=s.pct>=80?'#ECFDF5':s.pct>=50?'#FFFBEB':'#FEF2F2';
     return `<div class="card card-hover pointer" style="padding:16px 22px;margin-bottom:${ex?0:12}px;${ex?'border-radius:16px 16px 0 0':''}" onclick="V().expandedScore=${ex?'null':i};render()">
-    <div style="display:flex;align-items:center;gap:16px"><div style="width:42px;height:42px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:${co};flex-shrink:0">${s.pct}%</div><div style="flex:1"><div style="font-size:14px;font-weight:700">${s.score}/${s.total} ${s.username?'<span style="font-size:12px;color:#6B7280;font-weight:600">· '+esc(s.username)+'</span>':''}</div><div style="font-size:12px;color:#6B7280">${esc(s.date)}</div></div>${badge(s.pct>=80?'Excellent':s.pct>=50?'Good':'Review',co,bg)}<span style="font-size:14px;color:#6B7280;transform:rotate(${ex?180:0}deg)">▼</span></div></div>
+    <div style="display:flex;align-items:center;gap:16px"><div style="width:42px;height:42px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:${co};flex-shrink:0">${s.pct}%</div><div style="flex:1"><div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${s.score}/${s.total} ${s.username?'<span style="font-size:12px;color:#6B7280;font-weight:600">· '+esc(s.username)+'</span>':''} ${s.bpo?'<span style="font-size:10px;font-weight:800;padding:1px 7px;border-radius:6px;background:'+(s.bpo==='Vads'?'#FFF5F2;color:#EE4D2D':s.bpo==='ePerformax'?'#EFF6FF;color:#2563EB':'#F3F4F6;color:#6B7280')+'">'+esc(s.bpo)+'</span>':''}</div><div style="font-size:12px;color:#6B7280">${esc(s.date)}</div></div>${badge(s.pct>=80?'Excellent':s.pct>=50?'Good':'Review',co,bg)}<span style="font-size:14px;color:#6B7280;transform:rotate(${ex?180:0}deg)">▼</span></div></div>
     ${ex&&s.details?`<div class="score-detail">${(()=>{const g={};s.details.forEach(d=>{const w=d.week||'General';if(!g[w])g[w]=[];g[w].push(d);});return Object.entries(g).map(([w,ds])=>`<div style="margin:10px 0 8px">${badge(w,'#EE4D2D','#FFF5F2')}</div>${ds.map(d=>`<div style="padding:14px 18px;margin-bottom:8px;border-radius:12px;background:${d.ok?'#ECFDF5':'#FEF2F2'};border-left:4px solid ${d.ok?'#059669':'#DC2626'}">
 <div style="font-size:13px;font-weight:700;color:${d.ok?'#059669':'#DC2626'};margin-bottom:6px">${d.ok?'✓ CORRECT':'✗ WRONG'}</div>
 <div style="font-size:13px;line-height:1.7;margin-bottom:8px;color:#1A1A1A"><b>Q:</b> ${esc(d.q)}</div>
