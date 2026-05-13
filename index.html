@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v3</title>
+<title>WJ Dashboard v4</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -76,7 +76,7 @@ select.inp{cursor:pointer;background:#fff}
 <div id="sidebar">
   <div class="logo-row">
     <div class="logo-icon"><svg width="36" height="36" viewBox="0 0 120 120" fill="none"><rect width="120" height="120" fill="#fff"/><path d="M60 16c-8 0-15 4.5-18.5 11.2h37C75 20.5 68 16 60 16z" fill="#EE4D2D"/><path d="M41 26h-1.5c-.5 0-1 .1-1.4.3A27.5 27.5 0 0032 28v.5l3 56c.3 5 4.5 9 9.5 9h31c5 0 9.2-4 9.5-9l3-56V28a27 27 0 00-6-1.7c-.5-.2-1-.3-1.5-.3H79" fill="#EE4D2D"/><path d="M41.5 27.2a3.2 3.2 0 01-.3-1.3 3 3 0 013-3h.3A19 19 0 0160 13a19 19 0 0115.5 9.9h.3a3 3 0 013 3c0 .5-.1.9-.3 1.3" stroke="#EE4D2D" stroke-width="5" fill="none"/><text x="60" y="72" text-anchor="middle" fill="#fff" font-weight="900" font-size="38" font-family="Arial">S</text></svg></div>
-    <div><div class="logo-title">WJ Dashboard</div><div class="logo-sub">Return and Refund</div><div id="sidebar-username" style="font-size:11px;color:#EE4D2D;font-weight:700;margin-top:2px;display:none"></div></div>
+    <div><div class="logo-title">WJ Dashboard</div><div class="logo-sub">Return and Refund</div><div id="sidebar-username" style="font-size:11px;color:#EE4D2D;font-weight:700;margin-top:2px;display:none;cursor:pointer;text-decoration:underline dotted" onclick="showEditProfileModal()" title="Click to edit profile"></div></div>
   </div>
   <div id="nav-view"></div>
   <div id="nav"></div>
@@ -93,6 +93,22 @@ select.inp{cursor:pointer;background:#fff}
 <div id="toast"></div>
 <input type="file" id="file-import" accept=".xlsx,.xls" style="display:none">
 <!-- Paste JSON Modal -->
+<div id="edit-profile-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:20px;padding:32px 28px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center">
+    <div style="font-size:36px;margin-bottom:8px">👤</div>
+    <h2 style="font-size:18px;font-weight:900;margin-bottom:16px">Edit Profile</h2>
+    <input id="edit-name-input" class="inp" placeholder="Your full name..." style="margin-bottom:12px;font-size:15px;text-align:center">
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="edit-bpo-vads" onclick="editSelectBPO('Vads')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">Vads</button>
+      <button id="edit-bpo-ep" onclick="editSelectBPO('ePerformax')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">ePerformax</button>
+      <button id="edit-bpo-ar" onclick="editSelectBPO('Asia Recruit')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">Asia Recruit</button>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-primary" style="flex:1" onclick="saveEditProfile()">Save</button>
+      <button onclick="document.getElementById('edit-profile-modal').style.display='none'" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #E5E7EB;background:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>
+    </div>
+  </div>
+</div>
 <div id="username-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:20px;padding:40px 36px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center">
     <div style="font-size:48px;margin-bottom:12px">🧠</div>
@@ -102,6 +118,7 @@ select.inp{cursor:pointer;background:#fff}
     <div style="display:flex;gap:10px;margin-bottom:20px">
       <button id="bpo-vads" onclick="selectBPO('Vads')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Vads</button>
       <button id="bpo-ep" onclick="selectBPO('ePerformax')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">ePerformax</button>
+      <button id="bpo-ar" onclick="selectBPO('Asia Recruit')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Asia Recruit</button>
     </div>
     <button class="btn-primary" style="width:100%;padding:14px" onclick="confirmUsername()">Start Quiz →</button>
   </div>
@@ -146,7 +163,7 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v3';
+const VER='v4';
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -164,7 +181,7 @@ function updateSidebarUsername(){
   const el = document.getElementById('sidebar-username');
   if(!el) return;
   if(_currentUsername){
-    const bpoColor = _currentBPO==='Vads'?'#EE4D2D':_currentBPO==='ePerformax'?'#2563EB':'#6B7280';
+    const bpoColor = _currentBPO==='Vads'?'#EE4D2D':_currentBPO==='ePerformax'?'#2563EB':_currentBPO==='Asia Recruit'?'#059669':'#6B7280';
     el.innerHTML = '👤 '+esc(_currentUsername)+(_currentBPO?` <span style="background:${bpoColor};color:#fff;padding:1px 7px;border-radius:6px;font-size:10px;margin-left:4px">${esc(_currentBPO)}</span>`:'');
     el.style.display='block';
   } else {
@@ -174,10 +191,52 @@ function updateSidebarUsername(){
 
 function selectBPO(bpo){
   _currentBPO = bpo;
-  const vEl=document.getElementById('bpo-vads');
-  const eEl=document.getElementById('bpo-ep');
-  if(vEl) vEl.style.cssText += bpo==='Vads'?';border-color:#EE4D2D;background:#FFF5F2;color:#EE4D2D':';border-color:#E5E7EB;background:#fff;color:#6B7280';
-  if(eEl) eEl.style.cssText += bpo==='ePerformax'?';border-color:#2563EB;background:#EFF6FF;color:#2563EB':';border-color:#E5E7EB;background:#fff;color:#6B7280';
+  ['Vads','ePerformax','Asia Recruit'].forEach(b=>{
+    const id = b==='Vads'?'bpo-vads':b==='ePerformax'?'bpo-ep':'bpo-ar';
+    const el=document.getElementById(id);
+    if(!el)return;
+    const active=bpo===b;
+    const col=b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':'#059669';
+    const bg=b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':'#ECFDF5';
+    el.style.borderColor=active?col:'#E5E7EB';
+    el.style.background=active?bg:'#fff';
+    el.style.color=active?col:'#6B7280';
+  });
+}
+
+var _editBPOTemp = '';
+function showEditProfileModal(){
+  const modal = document.getElementById('edit-profile-modal');
+  if(!modal) return;
+  modal.style.display='flex';
+  const inp = document.getElementById('edit-name-input');
+  if(inp) inp.value = _currentUsername||'';
+  _editBPOTemp = _currentBPO||'';
+  if(_editBPOTemp) editSelectBPO(_editBPOTemp);
+}
+function editSelectBPO(bpo){
+  _editBPOTemp = bpo;
+  ['Vads','ePerformax','Asia Recruit'].forEach(b=>{
+    const id='edit-bpo-'+(b==='Vads'?'vads':b==='ePerformax'?'ep':'ar');
+    const el=document.getElementById(id); if(!el) return;
+    const active=bpo===b;
+    const col=b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':'#059669';
+    const bg=b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':'#ECFDF5';
+    el.style.borderColor=active?col:'#E5E7EB';
+    el.style.background=active?bg:'#fff';
+    el.style.color=active?col:'#6B7280';
+  });
+}
+function saveEditProfile(){
+  const inp=document.getElementById('edit-name-input');
+  const name=(inp?inp.value:'').trim();
+  if(!name){ inp&&inp.focus(); toast('Please enter your name','error'); return; }
+  if(!_editBPOTemp){ toast('Please select your BPO','error'); return; }
+  _currentUsername=name; _currentBPO=_editBPOTemp;
+  try{ localStorage.setItem('wj_username',name); localStorage.setItem('wj_bpo',_editBPOTemp); }catch(e){}
+  updateSidebarUsername();
+  document.getElementById('edit-profile-modal').style.display='none';
+  toast('✅ Profile updated!');
 }
 
 function showUsernameModal(pendingWeek){
@@ -410,11 +469,11 @@ function renderNav(){
   </div>`;
   const d=V();
   const tabs=[
-    {k:'dashboard',l:'Dashboard',ic:'📊',c:d.cases.length},
+    {k:'dashboard',l:'Home',ic:'🏠',c:undefined},
     {k:'cases',l:'WJ Cases',ic:'📋',c:d.cases.length},
     {k:'tips',l:'QA Tips',ic:'💡',c:d.tips.length},
-    {k:'quiz',l:'Quiz',ic:'🧠'},
-    {k:'scores',l:'Quiz Scores',ic:'📝',c:d.scores.length},
+    {k:'quiz',l:'Quiz',ic:'🧠',c:undefined},
+    {k:'scores',l:'Quiz Scores',ic:'📝',c:undefined},
   ];
   $('nav').innerHTML=tabs.map(t=>`<button class="nav-btn ${S.tab===t.k?'active':''}" onclick="switchTab('${t.k}')"><span class="icon">${t.ic}</span><span class="label">${t.l}</span>${t.c!==undefined?`<span class="count">${t.c}</span>`:''}</button>`).join('');
   $('nav-admin').innerHTML=`<button class="nav-btn ${S.tab==='admin'?'active':''}" onclick="switchTab('admin')"><span class="icon">⚙️</span><span class="label">Admin</span></button>`;
@@ -456,7 +515,7 @@ function rDash(){const d=V();const vn=viewNames[S.view];const vc=viewColors[S.vi
   <div class="stat-grid">
     <div class="card stat-card"><div class="stat-label">Weeks <span style="font-size:24px">📅</span></div><div class="stat-val" style="color:#2563EB">${aw.length}</div></div>
     <div class="card stat-card"><div class="stat-label">Total WJ <span style="font-size:24px">📋</span></div><div class="stat-val" style="color:${vc}">${d.cases.length}</div></div>
-    <div class="card stat-card"><div class="stat-label">QA Tips <span style="font-size:24px">💡</span></div><div class="stat-val" style="color:#059669">${d.tips.length}</div></div>
+    <div class="card stat-card"><div class="stat-label">Acknowledged <span style="font-size:24px">✅</span></div><div class="stat-val" style="color:#059669">${(d.acks||[]).length}<span style="font-size:14px;color:#6B7280;font-weight:600"> / ${d.cases.length+d.tips.length}</span></div></div>
     <div class="card stat-card"><div class="stat-label">Quiz Avg <span style="font-size:24px">🧠</span></div><div class="stat-val" style="color:#D97706">${qAvg}</div></div>
   </div>
   ${rKudosPodium(d)}
@@ -464,10 +523,7 @@ function rDash(){const d=V();const vn=viewNames[S.view];const vc=viewColors[S.vi
     ${rRCA('📂 Top RCA L2 (Total: '+d.cases.length+')',r2,d.cases.length,'#2563EB','#EFF6FF','#5B8DEF')}
     ${rRCA('🔍 Top RCA L3 (Total: '+d.cases.length+')',r3,d.cases.length,'#EE4D2D','#FFF5F2','#FF7B54')}
   </div>`}
-  <div class="card"><h3 style="font-size:17px;font-weight:800;margin-bottom:14px">🕐 Latest Cases (Last 4 Weeks)</h3>
-    ${empty?'<div class="text-center" style="padding:20px;color:#6B7280">No cases yet. Add from Admin → Cases.</div>':''}
-    ${last4.map(([w,wc])=>`<div class="week-hdr" style="margin-top:12px"><div class="week-tag">${esc(w)}</div></div>${wc.map(c=>`<div class="card card-hover pointer" style="padding:12px 16px;margin-bottom:6px" onclick="openCase('${c.id}')"><div style="font-size:14px;font-weight:700">${esc(c.returnReason)}</div><div style="font-size:12px;color:#6B7280;margin-top:3px">${esc(c.rcaL3)}</div></div>`).join('')}`).join('')}
-  </div></div>`;}
+  </div>`;}
 
 function rKudosPodium(d){
   if(!d.kudos.length)return `<div class="card"><h3 style="font-size:17px;font-weight:800;margin-bottom:12px">🏆 Kudos Chart</h3><div class="text-center" style="padding:16px;color:#6B7280">No kudos yet. Add from Admin → Kudos.</div></div>`;
@@ -539,6 +595,7 @@ function driveVideo(url){
 function isDriveUrl(url){ return url && url.includes('drive.google.com'); }
 
 function rCaseDetail(){const c=V().sel;if(!c)return '';
+  const caseKey = (c.id && String(c.id).trim() && String(c.id).trim()!=='undefined') ? String(c.id).trim() : [c.week,c.returnReason,c.rcaL1].join('|');
   return `<div><button class="btn-outline" style="padding:8px 16px;margin-bottom:16px" onclick="V().sel=null;render()">← Back</button>
   <div class="card" style="padding:0;overflow:hidden"><div style="background:linear-gradient(135deg,#EE4D2D,#FF6B47);padding:24px 28px;color:#fff">
     <div style="font-size:11px;opacity:.8;margin-bottom:4px">ID: ${esc(c.id)}</div><h2 style="font-size:22px;font-weight:900">${esc(c.returnReason)}</h2>
@@ -547,7 +604,7 @@ function rCaseDetail(){const c=V().sel;if(!c)return '';
   ${[{l:'📝 Findings',v:c.findings},{l:'🎯 Pain Point',v:c.painPoint},{l:'💡 Key Lesson',v:c.keyLesson}].filter(s=>s.v).map(s=>`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">${s.l}</div><div style="font-size:14px;line-height:1.8;padding:14px 18px;background:#F3F4F6;border-radius:12px">${esc(s.v)}</div></div>`).join('')}
   ${c.imageUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;margin-bottom:8px">📷 Evidence Image</div>${isDriveUrl(c.imageUrl)?`<img src="${esc(driveEmbed(c.imageUrl))}" style="max-width:100%;border-radius:12px;border:1px solid #E5E7EB" onerror="this.outerHTML='<a href=\''+${JSON.stringify(c.imageUrl)}+'\' target=\'_blank\' class=\'btn-primary\' style=\'display:inline-block;padding:10px 20px;text-decoration:none\'>🔗 Open Image in Drive</a>'">`:  `<img src="${esc(c.imageUrl)}" style="max-width:100%;border-radius:12px;border:1px solid #E5E7EB" onerror="this.style.display='none'">`}</div>`:''} 
   ${c.videoUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;margin-bottom:8px">🎥 Evidence Video</div>${isDriveUrl(c.videoUrl)?`<iframe src="${esc(driveVideo(c.videoUrl))}" style="width:100%;aspect-ratio:16/9;border-radius:12px;border:none" allowfullscreen></iframe>`:`<video src="${esc(c.videoUrl)}" controls style="max-width:100%;border-radius:12px" onerror="this.style.display='none'"></video>`}</div>`:''}
-  <div style="margin-top:8px;padding-top:20px;border-top:1px solid #F3F4F6">${hasAcked('case',c.id)?`<div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:12px;background:#ECFDF5;border:1.5px solid #059669"><span style="font-size:16px">✅</span><span style="font-size:13px;font-weight:700;color:#059669">You acknowledged this case</span></div>`:  `<button class="btn-primary" style="background:linear-gradient(135deg,#059669,#10B981)" onclick="acknowledge('case','${esc(c.id)}')">✅ I've Read & Understood This</button>`}</div>
+  <div style="margin-top:8px;padding-top:20px;border-top:1px solid #F3F4F6">${hasAcked('case',caseKey)?`<div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:12px;background:#ECFDF5;border:1.5px solid #059669"><span style="font-size:16px">✅</span><span style="font-size:13px;font-weight:700;color:#059669">You acknowledged this case</span></div>`:`<button class="btn-primary" style="background:linear-gradient(135deg,#059669,#10B981)" onclick="acknowledgeCurrentCase()">✅ I've Read & Understood This</button>`}</div>
   </div></div></div>`;}
 
 /* ═══ TIPS ═══ */
@@ -662,6 +719,8 @@ function rScores(){const d=V();
       ${buildPodium(d.scores,'Vads','#EE4D2D','#FFF5F2')}
       <div style="width:1px;background:#E5E7EB;align-self:stretch;flex-shrink:0"></div>
       ${buildPodium(d.scores,'ePerformax','#2563EB','#EFF6FF')}
+      <div style="width:1px;background:#E5E7EB;align-self:stretch;flex-shrink:0"></div>
+      ${buildPodium(d.scores,'Asia Recruit','#059669','#ECFDF5')}
     </div>
   </div>`;
 
@@ -677,7 +736,7 @@ function rScores(){const d=V();
   <h3 style="font-size:15px;font-weight:800;margin-bottom:12px">📋 All Attempts</h3>
   ${d.scores.map((s,i)=>{const ex=d.expandedScore===i;const co=s.pct>=80?'#059669':s.pct>=50?'#D97706':'#DC2626';const bg=s.pct>=80?'#ECFDF5':s.pct>=50?'#FFFBEB':'#FEF2F2';
     return `<div class="card card-hover pointer" style="padding:16px 22px;margin-bottom:${ex?0:12}px;${ex?'border-radius:16px 16px 0 0':''}" onclick="V().expandedScore=${ex?'null':i};render()">
-    <div style="display:flex;align-items:center;gap:16px"><div style="width:42px;height:42px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:${co};flex-shrink:0">${s.pct}%</div><div style="flex:1"><div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${s.score}/${s.total} ${s.username?'<span style="font-size:12px;color:#6B7280;font-weight:600">· '+esc(s.username)+'</span>':''} ${s.bpo?'<span style="font-size:10px;font-weight:800;padding:1px 7px;border-radius:6px;background:'+(s.bpo==='Vads'?'#FFF5F2;color:#EE4D2D':s.bpo==='ePerformax'?'#EFF6FF;color:#2563EB':'#F3F4F6;color:#6B7280')+'">'+esc(s.bpo)+'</span>':''}</div><div style="font-size:12px;color:#6B7280">${esc(s.date)}</div></div>${badge(s.pct>=80?'Excellent':s.pct>=50?'Good':'Review',co,bg)}<span style="font-size:14px;color:#6B7280;transform:rotate(${ex?180:0}deg)">▼</span></div></div>
+    <div style="display:flex;align-items:center;gap:16px"><div style="width:42px;height:42px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:${co};flex-shrink:0">${s.pct}%</div><div style="flex:1"><div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${s.score}/${s.total} ${s.username?'<span style="font-size:12px;color:#6B7280;font-weight:600">· '+esc(s.username)+'</span>':''} ${s.bpo?'<span style="font-size:10px;font-weight:800;padding:1px 7px;border-radius:6px;background:'+(s.bpo==='Vads'?'#FFF5F2;color:#EE4D2D':s.bpo==='ePerformax'?'#EFF6FF;color:#2563EB':s.bpo==='Asia Recruit'?'#ECFDF5;color:#059669':'#F3F4F6;color:#6B7280')+'" >'+esc(s.bpo)+'</span>':''}</div><div style="font-size:12px;color:#6B7280">${esc(s.date)}</div></div>${badge(s.pct>=80?'Excellent':s.pct>=50?'Good':'Review',co,bg)}<span style="font-size:14px;color:#6B7280;transform:rotate(${ex?180:0}deg)">▼</span></div></div>
     ${ex&&s.details?`<div class="score-detail">${(()=>{const g={};s.details.forEach(d=>{const w=d.week||'General';if(!g[w])g[w]=[];g[w].push(d);});return Object.entries(g).map(([w,ds])=>`<div style="margin:10px 0 8px">${badge(w,'#EE4D2D','#FFF5F2')}</div>${ds.map(d=>`<div style="padding:14px 18px;margin-bottom:8px;border-radius:12px;background:${d.ok?'#ECFDF5':'#FEF2F2'};border-left:4px solid ${d.ok?'#059669':'#DC2626'}">
 <div style="font-size:13px;font-weight:700;color:${d.ok?'#059669':'#DC2626'};margin-bottom:6px">${d.ok?'✓ CORRECT':'✗ WRONG'}</div>
 <div style="font-size:13px;line-height:1.7;margin-bottom:8px;color:#1A1A1A"><b>Q:</b> ${esc(d.q)}</div>
@@ -687,98 +746,17 @@ ${d.ok?`<div style="font-size:13px"><span style="font-weight:700;color:#059669">
 
 /* ═══ ADMIN ═══ */
 function rAdmin(){const d=V();
-  const tabs=[{k:'cases',l:'📋 Cases',c:d.cases.length},{k:'tips',l:'💡 Tips',c:d.tips.length},{k:'quiz',l:'🧠 Quiz Qs',c:d.customQs.length},{k:'kudos',l:'🏆 Kudos',c:d.kudos.length},{k:'reminder',l:'📢 Reminder'},{k:'userstats',l:'👥 User Stats'},{k:'import',l:'📁 Import/Export'},{k:'changelog',l:'📋 Version Updates'}];
-  let ct='';switch(d.adminSub){case 'cases':ct=rAdmCases();break;case 'tips':ct=rAdmTips();break;case 'quiz':ct=rAdmQuiz();break;case 'kudos':ct=rAdmKudos();break;case 'reminder':ct=rAdmReminder();break;case 'userstats':ct=rAdmUserStats();break;case 'import':ct=rAdmIO();break;case 'changelog':ct=rAdmChangelog();break;}
-  return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:2px">⚙️ Admin — ${viewNames[S.view]}</h1><p style="font-size:13px;color:#6B7280;margin-bottom:20px">Manage cases, tips, quiz, kudos, and data.</p>
+  const tabs=[{k:'changelog',l:'📋 Version Updates'},{k:'userstats',l:'👥 User Stats'}];
+  let ct='';switch(d.adminSub||'changelog'){case 'userstats':ct=rAdmUserStats();break;default:ct=rAdmChangelog();}
+  return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:2px">⚙️ Admin — ${viewNames[S.view]}</h1><p style="font-size:13px;color:#6B7280;margin-bottom:20px">Statistics and version history. All data is managed via Google Sheets.</p>
   <div class="flex-w mb16">${tabs.map(t=>`<button style="padding:10px 20px;border-radius:10px;border:1.5px solid ${d.adminSub===t.k?'#EE4D2D':'#E5E7EB'};background:${d.adminSub===t.k?'#FFF5F2':'#fff'};color:${d.adminSub===t.k?'#EE4D2D':'#6B7280'};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="V().adminSub='${t.k}';render()">${t.l}${t.c!==undefined?' <span style="opacity:.7">('+t.c+')</span>':''}</button>`).join('')}</div>${ct}</div>`;}
 
 
-function rAdmCases(){const d=V();const wks=['All',...uv(d.cases,'week')];const f=d.cases.filter(c=>d.adminCaseWeek==='All'||c.week===d.adminCaseWeek);
-  return `<div class="flex-c mb16 flex-w"><button class="btn-primary" onclick="V().showAddCase=!V().showAddCase;render()">${d.showAddCase?'✕ Cancel':'+ Add Case'}</button>
-  <button class="btn-sm btn-undo" onclick="undoCase()" ${d.undoCases.length?'':'disabled style="opacity:.4"'}>↩️ Undo</button>
-  ${dd('ac-wk',d.adminCaseWeek,wks,'All Weeks',"V().adminCaseWeek=this.value;render()")}</div>
-  ${d.showAddCase?rAddCaseForm():''}${d.editingCase?rEditCaseForm():''}
-  ${groupByWeek(f).map(([w,wc])=>`<div class="week-hdr"><div class="week-tag">${esc(w)}</div>${weekBtn(w,"V()._prefillCaseWeek='"+esc(w)+"';V().showAddCase=true;render()")}</div>
-  ${wc.map(c=>`<div class="card" style="padding:16px 20px;display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:14px;font-weight:700">${esc(c.returnReason)}</div><div style="font-size:12px;color:#6B7280;margin-top:2px">${esc(c.rcaL3)}</div></div>
-  <button class="btn-sm btn-edit" onclick="editCase('${c.id}')">✏️ Edit</button><button class="btn-sm btn-del" onclick="delCase('${c.id}')">🗑 Delete</button></div>`).join('')}`).join('')}`;}
-function rAddCaseForm(){const pw=V()._prefillCaseWeek||'';return `<div class="card mb16" style="border-color:#EE4D2D;padding:20px"><div class="flex-sb mb8"><div style="font-size:13px;font-weight:800;color:#EE4D2D">➕ New Case</div><button style="border:none;background:none;color:#6B7280;font-size:18px;cursor:pointer" onclick="V().showAddCase=false;render()">✕</button></div>
-${['id','returnReason','rcaL1','rcaL2','rcaL3'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><input class="inp" id="nc-${k}" placeholder="${k}"></div>`).join('')}
-<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">week</label><input class="inp" id="nc-week" value="${esc(pw)}"></div>
-${['findings','painPoint','keyLesson'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><textarea class="inp" id="nc-${k}" rows="2"></textarea></div>`).join('')}
-<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">📷 Evidence Image</label>${dropZone('nc-img','','Drop image or click to upload')}</div>
-<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">🎥 Evidence Video</label>${dropZone('nc-vid','','Drop video or click to upload')}</div>
-<div class="flex-c mt8"><button class="btn-primary" onclick="addCase()">💾 Save</button></div></div>`;}
-function addCase(){const d=V();const fs=['id','returnReason','week','rcaL1','rcaL2','rcaL3','findings','painPoint','keyLesson'];const c={};fs.forEach(k=>{const el=$('nc-'+k);c[k]=el?el.value:'';});if(!c.returnReason||!c.week){toast('Return reason & week required','error');return;}if(!c.id)c.id=String(Date.now());c.imageUrl=d._ncImgData||'';c.videoUrl=d._ncVidData||'';d._ncImgData='';d._ncVidData='';d.cases.push(c);d.showAddCase=false;toast('Case added!');render();}
-function rEditCaseForm(){const c=V().editingCase;return `<div class="card mb16" style="border-color:#EE4D2D;padding:20px"><div style="font-size:13px;font-weight:800;color:#EE4D2D;margin-bottom:10px">✏️ Editing: ${esc(c.id)}</div>
-${['returnReason','week','rcaL1','rcaL2','rcaL3'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><input class="inp" value="${esc(c[k]||'')}" oninput="V().editingCase.${k}=this.value"></div>`).join('')}
-${['findings','painPoint','keyLesson'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><textarea class="inp" rows="2" oninput="V().editingCase.${k}=this.value">${esc(c[k]||'')}</textarea></div>`).join('')}
-<div class="flex-c mt8"><button class="btn-primary" onclick="saveEditCase()">💾 Save</button><button class="btn-outline" onclick="V().editingCase=null;render()">Cancel</button></div></div>`;}
-function editCase(id){V().editingCase={...V().cases.find(c=>c.id===id)};render();}
-function saveEditCase(){const d=V();if(!d.editingCase)return;d.cases=d.cases.map(c=>c.id===d.editingCase.id?{...d.editingCase}:c);d.editingCase=null;toast('Updated');render();}
-function delCase(id){const d=V();d.undoCases.push({data:d.cases.find(c=>c.id===id)});d.cases=d.cases.filter(c=>c.id!==id);toast('Deleted');render();}
-function undoCase(){const d=V();if(!d.undoCases.length)return;d.cases.push(d.undoCases.pop().data);toast('Restored');render();}
 
-function rAdmTips(){const d=V();const wks=['All',...uv(d.tips,'week')];const f=d.tips.filter(t=>d.adminTipWeek==='All'||t.week===d.adminTipWeek);
-  return `<div class="flex-c mb16 flex-w"><button class="btn-primary" onclick="V().showAddTip=!V().showAddTip;render()">${d.showAddTip?'✕ Cancel':'+ Add Tip'}</button><button class="btn-sm btn-undo" onclick="undoTip()" ${d.undoTips.length?'':'disabled style="opacity:.4"'}>↩️ Undo</button>${dd('at-wk',d.adminTipWeek,wks,'All Weeks',"V().adminTipWeek=this.value;render()")}</div>
-  ${d.showAddTip?rAddTipForm():''}${d.editingTip?rEditTipForm():''}
-  ${groupByWeek(f).map(([w,wt])=>`<div class="week-hdr"><div class="week-tag">${esc(w)}</div>${weekBtn(w,"V()._prefillTipWeek='"+esc(w)+"';V().showAddTip=true;render()")}</div>
-  ${wt.map(t=>`<div class="card" style="padding:16px 20px;display:flex;align-items:center;gap:10px"><div style="flex:1"><div class="flex-c">${esc(t.title)} ${badge(t.category,'#2563EB','#EFF6FF')} ${t.week?badge(t.week,'#6B7280','#F3F4F6'):''}</div><div style="font-size:12px;color:#6B7280;margin-top:3px">${esc((t.tip||'').slice(0,100))}...</div></div>
-  <button class="btn-sm btn-edit" onclick="editTip(${t.id})">✏️ Edit</button><button class="btn-sm btn-del" onclick="delTip(${t.id})">🗑 Delete</button></div>`).join('')}`).join('')}`;}
-function rAddTipForm(){const pw=V()._prefillTipWeek||'';return `<div class="card mb16" style="border-color:#EE4D2D;padding:20px"><div class="flex-sb mb8"><div style="font-size:13px;font-weight:800;color:#EE4D2D">➕ New Tip</div><button style="border:none;background:none;color:#6B7280;font-size:18px;cursor:pointer" onclick="V().showAddTip=false;render()">✕</button></div>
-<input class="inp mb8" id="nt-title" placeholder="Title" style="font-weight:700"><textarea class="inp mb8" id="nt-tip" rows="3" placeholder="Content..."></textarea>
-<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">📷 Image</label>${dropZone('nt-img','','Drop image or click')}</div>
-<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">🎥 Video</label>${dropZone('nt-vid','','Drop video or click')}</div>
-<div class="flex-c"><select class="inp" style="width:auto" id="nt-cat"><option>SOP</option><option>Evidence</option><option>Process</option><option>Tools</option><option>General</option></select>
-<select class="inp" style="width:auto" id="nt-week"><option value="">Week</option>${uv(V().cases,'week').map(w=>`<option ${w===pw?'selected':''}>${esc(w)}</option>`).join('')}</select>
-<button class="btn-primary" onclick="addTip()">Save</button></div></div>`;}
-function addTip(){const d=V();const t=$('nt-title').value,c=$('nt-tip').value,cat=$('nt-cat').value,w=$('nt-week').value;if(!t||!c)return;d.tips.unshift({id:Date.now(),title:t,tip:c,category:cat,week:w,imageUrl:d._ntImgData||'',videoUrl:d._ntVidData||'',date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})});d._ntImgData='';d._ntVidData='';d.showAddTip=false;toast('Added!');render();}
-function rEditTipForm(){const t=V().editingTip;return `<div class="card mb16" style="border-color:#2563EB;padding:20px"><div style="font-size:13px;font-weight:800;color:#2563EB;margin-bottom:10px">✏️ Edit Tip</div><input class="inp mb8" value="${esc(t.title)}" oninput="V().editingTip.title=this.value" style="font-weight:700"><textarea class="inp mb8" rows="3" oninput="V().editingTip.tip=this.value">${esc(t.tip)}</textarea><div class="flex-c"><button class="btn-primary" onclick="saveEditTip()">💾 Save</button><button class="btn-outline" onclick="V().editingTip=null;render()">Cancel</button></div></div>`;}
-function editTip(id){V().editingTip={...V().tips.find(t=>t.id===id)};render();}
-function saveEditTip(){const d=V();if(!d.editingTip)return;d.tips=d.tips.map(t=>t.id===d.editingTip.id?{...d.editingTip}:t);d.editingTip=null;toast('Updated');render();}
-function delTip(id){const d=V();d.undoTips.push({data:d.tips.find(t=>t.id===id)});d.tips=d.tips.filter(t=>t.id!==id);toast('Deleted');render();}
-function undoTip(){const d=V();if(!d.undoTips.length)return;d.tips.push(d.undoTips.pop().data);toast('Restored');render();}
+/* ═══ ADMIN — read-only, data managed via Google Sheets ═══ */
+/* All add/edit/delete functions removed — use Google Sheets + Apps Script trigger */
 
-function rAdmQuiz(){const d=V();const wks=['All',...uv(d.customQs,'week')];const f=d.customQs.map((q,i)=>({...q,_i:i})).filter(q=>d.adminQWeek==='All'||q.week===d.adminQWeek);
-  return `<div class="flex-c mb16 flex-w"><button class="btn-primary" onclick="V().showAddQ=!V().showAddQ;if(!V().showAddQ)V().editQIdx=null;render()">${d.showAddQ?'✕ Cancel':'+ Add Question'}</button>
-  <button class="btn-sm btn-undo" onclick="undoQ()" ${d.undoQs.length?'':'disabled style="opacity:.4"'}>↩️ Undo</button>${dd('aq-wk',d.adminQWeek,wks,'All Weeks',"V().adminQWeek=this.value;render()")}</div>
-  ${d.showAddQ?rAddQForm():''}${!f.length&&!d.showAddQ?'<div class="text-center" style="padding:30px;color:#6B7280">No questions.</div>':''}
-  ${groupByWeek(f).map(([w,qs])=>`<div class="week-hdr"><div class="week-tag">${esc(w)}</div>${weekBtn(w,"addQToWeek('"+esc(w)+"')")}</div>
-  ${qs.map(q=>`<div class="card" style="padding:16px 20px"><div style="font-size:14px;font-weight:700;margin-bottom:10px">${esc(q.q)}</div>
-  ${q.opts.map((o,j)=>`<div class="admin-q-opt ${j===q.ans?'correct':''}">${String.fromCharCode(65+j)}. ${esc(o)}</div>`).join('')}
-  <div class="flex-c mt8"><button class="btn-sm btn-edit" onclick="editQ(${q._i})">✏️ Edit</button><button class="btn-sm btn-del" onclick="delQ(${q._i})">🗑 Delete</button></div></div>`).join('')}`).join('')}`;}
-function rAddQForm(){const d=V();const isE=d.editQIdx!==null;const q=isE?d.customQs[d.editQIdx]:{q:'',opts:['','','',''],ans:0,week:''};const ans=isE?q.ans:d._qFormAns;
-  return `<div class="card mb16" style="border-color:#EE4D2D;padding:20px"><div style="font-size:13px;font-weight:800;color:#EE4D2D;margin-bottom:10px">${isE?'✏️ Edit':'➕ New'} Question</div>
-  <textarea class="inp mb8" id="qf-q" rows="2" placeholder="Question...">${esc(q.q)}</textarea><div style="font-size:12px;font-weight:700;margin-bottom:6px">Options (click to mark correct)</div>
-  ${q.opts.map((o,i)=>`<div class="flex-c mb8"><button style="width:28px;height:28px;border-radius:14px;border:2px solid ${ans===i?'#059669':'#E5E7EB'};background:${ans===i?'#ECFDF5':'#fff'};color:${ans===i?'#059669':'#6B7280'};font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0" onclick="V()._qFormAns=${i};render()">${ans===i?'✓':String.fromCharCode(65+i)}</button><input class="inp" style="flex:1" id="qf-o${i}" placeholder="Option ${String.fromCharCode(65+i)}" value="${esc(o)}"></div>`).join('')}
-  <div class="flex-c mt8"><select class="inp" style="width:auto" id="qf-wk"><option value="">Week</option>${uv(d.cases,'week').map(w=>`<option ${w===q.week?'selected':''}>${esc(w)}</option>`).join('')}</select><button class="btn-primary" onclick="saveQ()">${isE?'💾 Update':'Save'}</button></div></div>`;}
-function addQToWeek(w){const d=V();d.editQIdx=null;d._qFormAns=0;d.showAddQ=true;render();setTimeout(()=>{const s=$('qf-wk');if(s)s.value=w;},50);}
-function saveQ(){const d=V();const q=$('qf-q').value;const opts=[0,1,2,3].map(i=>($('qf-o'+i)||{}).value||'');const wk=($('qf-wk')||{}).value||'';if(!q||opts.filter(Boolean).length<2)return;
-  const obj={q,opts,ans:d._qFormAns,week:wk};if(d.editQIdx!==null){d.customQs[d.editQIdx]=obj;d.editQIdx=null;}else{d.customQs.push(obj);}d.showAddQ=false;d._qFormAns=0;toast('Saved!');render();}
-function editQ(i){const d=V();d.editQIdx=i;d._qFormAns=d.customQs[i].ans;d.showAddQ=true;render();}
-function delQ(i){const d=V();d.undoQs.push({data:d.customQs[i],idx:i});d.customQs.splice(i,1);toast('Deleted');render();}
-function undoQ(){const d=V();if(!d.undoQs.length)return;const l=d.undoQs.pop();d.customQs.splice(l.idx,0,l.data);toast('Restored');render();}
 
-function rAdmKudos(){const d=V();
-  return `<div class="flex-c mb16"><button class="btn-primary" onclick="V().showAddKudos=!V().showAddKudos;render()">${d.showAddKudos?'✕ Cancel':'+ Add Kudos'}</button>
-  <button class="btn-sm btn-undo" onclick="undoKudos()" ${d.undoKudos.length?'':'disabled style="opacity:.4"'}>↩️ Undo</button></div>
-  ${d.showAddKudos?rAddKudosForm():''}${d.editingKudos?rEditKudosForm():''}
-  ${d.kudos.map((k,i)=>`<div class="card" style="padding:16px 20px;display:flex;align-items:center;gap:14px">
-    <div style="width:36px;height:36px;border-radius:10px;background:${i<3?'linear-gradient(135deg,#FFD700,#FFA000)':'#F3F4F6'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:${i<3?'#fff':'#6B7280'};flex-shrink:0">#${i+1}</div>
-    <div style="flex:1"><div style="font-size:14px;font-weight:700">${esc(k.name)} — <span style="color:#EE4D2D">${esc(k.score)}</span></div><div style="font-size:12px;color:#6B7280;margin-top:2px">${esc(k.achievement)}</div></div>
-    <button class="btn-sm btn-edit" onclick="editKudos(${i})">✏️ Edit</button><button class="btn-sm btn-del" onclick="delKudos(${i})">🗑 Delete</button></div>`).join('')}
-  ${!d.kudos.length?'<div class="text-center" style="padding:30px;color:#6B7280">No kudos yet.</div>':''}`;
-}
-function rAddKudosForm(){return `<div class="card mb16" style="border-color:#FFD700;padding:20px"><div class="flex-sb mb8"><div style="font-size:13px;font-weight:800;color:#D97706">🏆 New Kudos</div><button style="border:none;background:none;color:#6B7280;font-size:18px;cursor:pointer" onclick="V().showAddKudos=false;render()">✕</button></div>
-<input class="inp mb8" id="kd-n" placeholder="Agent Name"><input class="inp mb8" id="kd-s" placeholder="QA Score (e.g. 98%)"><input class="inp mb8" id="kd-a" placeholder="Achievement">
-<div class="flex-c"><select class="inp" style="width:auto" id="kd-team"><option value="Vads">Vads</option><option value="ePerformax">ePerformax</option></select><select class="inp" style="width:auto" id="kd-w"><option value="">Week</option>${uv(V().cases,'week').map(w=>`<option>${esc(w)}</option>`).join('')}</select><button class="btn-primary" onclick="addKudos()">Save</button></div></div>`;}
-function rEditKudosForm(){const k=V().editingKudos;return `<div class="card mb16" style="border-color:#2563EB;padding:20px"><div style="font-size:13px;font-weight:800;color:#2563EB;margin-bottom:10px">✏️ Edit Kudos</div><input class="inp mb8" value="${esc(k.name)}" oninput="V().editingKudos.name=this.value"><input class="inp mb8" value="${esc(k.score)}" oninput="V().editingKudos.score=this.value"><input class="inp mb8" value="${esc(k.achievement)}" oninput="V().editingKudos.achievement=this.value">
-<div class="flex-c"><select class="inp" style="width:auto" id="ek-team"><option value="Vads" ${k.team==='Vads'?'selected':''}>Vads</option><option value="ePerformax" ${k.team==='ePerformax'?'selected':''}>ePerformax</option></select>
-<button class="btn-primary" onclick="saveEditKudos()">💾 Save</button><button class="btn-outline" onclick="V().editingKudos=null;render()">Cancel</button></div></div>`;}
-function addKudos(){const d=V();const n=$('kd-n').value,s=$('kd-s').value,a=$('kd-a').value,w=$('kd-w').value,team=$('kd-team').value;if(!n||!s)return;d.kudos.push({id:Date.now(),name:n,score:s,achievement:a,week:w,team:team});d.showAddKudos=false;toast('Added!');render();}
-function editKudos(i){V().editingKudos={...V().kudos[i],_idx:i};render();}
-function saveEditKudos(){const d=V();if(!d.editingKudos)return;const i=d.editingKudos._idx;const ek=d.editingKudos;const teamEl=$('ek-team');d.kudos[i]={id:d.kudos[i].id,name:ek.name,score:ek.score,achievement:ek.achievement,week:d.kudos[i].week,team:teamEl?teamEl.value:d.kudos[i].team};d.editingKudos=null;toast('Updated');render();}
-function delKudos(i){const d=V();d.undoKudos.push({data:d.kudos[i],idx:i});d.kudos.splice(i,1);toast('Deleted');render();}
-function undoKudos(){const d=V();if(!d.undoKudos.length)return;const l=d.undoKudos.pop();d.kudos.splice(l.idx,0,l.data);toast('Restored');render();}
 
 function rAdmUserStats(){
   /* Collect all scores across all views */
@@ -813,8 +791,8 @@ function rAdmUserStats(){
   const ackByUser={};
   allAcks.forEach(a=>{ const u=a.username||'?'; if(!ackByUser[u]) ackByUser[u]={cases:0,tips:0}; if(a.type==='case') ackByUser[u].cases++; else if(a.type==='tip') ackByUser[u].tips++; });
 
-  const bpoColor=b=>b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':'#6B7280';
-  const bpoBg=b=>b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':'#F3F4F6';
+  const bpoColor=b=>b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':b==='Asia Recruit'?'#059669':'#6B7280';
+  const bpoBg=b=>b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':b==='Asia Recruit'?'#ECFDF5':'#F3F4F6';
   const scoreColor=p=>p>=80?'#059669':p>=50?'#D97706':'#DC2626';
   const scoreBg=p=>p>=80?'#ECFDF5':p>=50?'#FFFBEB':'#FEF2F2';
 
@@ -883,7 +861,7 @@ function rAdmUserStats(){
       </tr></thead>
       <tbody>${allAcks.slice().reverse().map((a,i)=>`<tr style="border-bottom:1px solid #F3F4F6;background:${i%2?'#FAFAFA':'#fff'}">
         <td style="padding:9px 12px;font-weight:700">${esc(a.username||'?')}</td>
-        <td style="padding:9px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${a.bpo==='Vads'?'#FFF5F2':a.bpo==='ePerformax'?'#EFF6FF':'#F3F4F6'};color:${a.bpo==='Vads'?'#EE4D2D':a.bpo==='ePerformax'?'#2563EB':'#6B7280'}">${esc(a.bpo||'—')}</span></td>
+        <td style="padding:9px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${a.bpo==='Vads'?'#FFF5F2':a.bpo==='ePerformax'?'#EFF6FF':a.bpo==='Asia Recruit'?'#ECFDF5':'#F3F4F6'};color:${a.bpo==='Vads'?'#EE4D2D':a.bpo==='ePerformax'?'#2563EB':a.bpo==='Asia Recruit'?'#059669':'#6B7280'}">${esc(a.bpo||'—')}</span></td>
         <td style="padding:9px 12px;text-align:center"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${a.type==='case'?'#FFF5F2':'#EFF6FF'};color:${a.type==='case'?'#EE4D2D':'#2563EB'}">${a.type==='case'?'📋 Case':'💡 Tip'}</span></td>
         <td style="padding:9px 12px;font-size:12px">${esc(a.view||'')}</td>
         <td style="padding:9px 12px;font-size:12px;color:#6B7280">${esc(a.date||'')}</td>
@@ -892,28 +870,14 @@ function rAdmUserStats(){
   </div></div>`;
 }
 
-function rAdmReminder(){const d=V();const rm=Array.isArray(d.reminder)?[...d.reminder]:['','','','',''];while(rm.length<5)rm.push('');
-  return `<div class="card" style="padding:24px"><h3 style="font-size:17px;font-weight:800;margin-bottom:6px">📢 Weekly Reminder Banner</h3>
-  <p style="font-size:13px;color:#6B7280;margin-bottom:20px">Each reminder is independent. Only filled ones appear on the dashboard. Up to 5.</p>
-  ${[0,1,2,3,4].map(i=>{const filled=rm[i]&&rm[i].trim();return `<div style="padding:16px;border-radius:14px;border:2px solid ${filled?'#EE4D2D':'#E5E7EB'};background:${filled?'#FFF5F2':'#FAFAFA'};margin-bottom:12px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <label style="font-size:12px;font-weight:800;color:${filled?'#EE4D2D':'#6B7280'};display:flex;align-items:center;gap:6px">
-        <span style="background:${filled?'#EE4D2D':'#D1D5DB'};color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">${i+1}</span>
-        Reminder ${i+1} ${filled?'<span style="font-size:10px;font-weight:700;background:#ECFDF5;color:#059669;padding:1px 6px;border-radius:6px">Active</span>':'<span style="font-size:10px;color:#9CA3AF">Empty</span>'}
-      </label>
-      <div style="display:flex;gap:6px">
-        <button style="padding:5px 12px;border-radius:8px;border:none;background:#EE4D2D;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="saveOneReminder(${i})">💾 Save</button>
-        <button style="padding:5px 12px;border-radius:8px;border:1.5px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="clearOneReminder(${i})">✕ Clear</button>
-      </div>
-    </div>
-    <textarea class="inp" id="adm-reminder-${i}" rows="2" placeholder="Type reminder ${i+1} here…" style="margin-bottom:0;background:#fff">${esc(rm[i]||'')}</textarea>
-  </div>`;}).join('')}
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;padding-top:16px;border-top:1px solid #E5E7EB">
-    <button class="btn-primary" onclick="saveReminder()">💾 Save All</button>
-    <button style="padding:10px 20px;border-radius:10px;border:1.5px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="deleteReminder()">🗑 Clear All</button>
-    <button style="padding:10px 20px;border-radius:10px;border:1.5px solid #6B7280;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="undoReminder()">↩ Undo</button>
-  </div></div>`;
+function acknowledgeCurrentCase(){
+  const c = V().sel;
+  if(!c){ toast('No case selected','error'); return; }
+  // Use id if available, otherwise fall back to a combination of fields as unique key
+  const id = (c.id && String(c.id).trim()) ? String(c.id).trim() : [c.week,c.returnReason,c.rcaL1].join('|');
+  acknowledge('case', id);
 }
+
 function acknowledge(type, id){
   if(!_currentUsername){ toast('Please take the quiz first to set your name','error'); return; }
   const d=V();
@@ -924,13 +888,19 @@ function acknowledge(type, id){
   toast('✅ Acknowledged!');
   render();
 }
-function hasAcked(type, id){ const d=V(); return _currentUsername&&(d.acks||[]).some(a=>a.type===type&&a.id===String(id)&&a.username===_currentUsername); }
-function saveReminder(){const d=V();d._reminderUndo=[...(Array.isArray(d.reminder)?d.reminder:[])];d.reminder=[0,1,2,3,4].map(i=>{const el=$('adm-reminder-'+i);return el?el.value.trim():'';});toast('All reminders saved!');render();}
-function saveOneReminder(i){const d=V();d._reminderUndo=[...(Array.isArray(d.reminder)?d.reminder:[])];const rm=Array.isArray(d.reminder)?[...d.reminder]:['','','','',''];while(rm.length<5)rm.push('');const el=$('adm-reminder-'+i);rm[i]=el?el.value.trim():'';d.reminder=rm;toast('Reminder '+(i+1)+' saved!');render();}
-function clearOneReminder(i){const d=V();d._reminderUndo=[...(Array.isArray(d.reminder)?d.reminder:[])];const rm=Array.isArray(d.reminder)?[...d.reminder]:['','','','',''];while(rm.length<5)rm.push('');rm[i]='';d.reminder=rm;toast('Reminder '+(i+1)+' cleared.');render();}
-function deleteReminder(){const d=V();d._reminderUndo=[...(Array.isArray(d.reminder)?d.reminder:[])];d.reminder=['','','','',''];toast('All reminders cleared.');render();}
-function undoReminder(){const d=V();if(d._reminderUndo){d.reminder=d._reminderUndo;d._reminderUndo=null;toast('Reminders restored.');render();}else{toast('Nothing to undo.','error');}}
-
+function hasAcked(type, id){
+  if(!_currentUsername) return false;
+  const d=V();
+  if(type==='case'){
+    // id might be undefined/empty for cases imported from Sheets without an ID column
+    // Use same fallback logic as acknowledgeCurrentCase
+    const c = typeof id === 'object' ? id : null;
+    const key = (id && String(id).trim() && String(id).trim()!=='undefined') ? String(id).trim() : null;
+    if(!key) return false;
+    return (d.acks||[]).some(a=>a.type===type&&a.id===key&&a.username===_currentUsername);
+  }
+  return (d.acks||[]).some(a=>a.type===type&&a.id===String(id)&&a.username===_currentUsername);
+}
 /* ═══ IMPORT/EXPORT ═══ */
 function rAdmChangelog(){
   const versions=[
