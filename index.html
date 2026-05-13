@@ -713,14 +713,18 @@ function rScores(){const d=V();
   if(!d.scores.length)return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">📝 Quiz Scores</h1><div class="card text-center" style="padding:40px"><div style="font-size:56px;margin-bottom:12px">📝</div><h3 style="font-weight:800;margin-bottom:8px">No attempts yet</h3><button class="btn-primary" onclick="switchTab('quiz')" style="margin-top:16px">Go to Quiz</button></div></div>`;
   const tc=d.scores.reduce((a,s)=>a+s.score,0);const te=d.scores.reduce((a,s)=>a+(s.total-s.score),0);const b=Math.max(...d.scores.map(s=>s.pct));const av=Math.round(d.scores.reduce((a,s)=>a+s.pct,0)/d.scores.length);
 
+  // BPOs per view: DMS = Vads + ePerformax, L2RR = ePerformax only, P1 = ePerformax + Asia Recruit
+  const viewBPOs = {
+    dms:  [['Vads','#EE4D2D','#FFF5F2'],['ePerformax','#2563EB','#EFF6FF']],
+    l2rr: [['ePerformax','#2563EB','#EFF6FF']],
+    p1:   [['ePerformax','#2563EB','#EFF6FF'],['Asia Recruit','#059669','#ECFDF5']],
+  };
+  const bposForView = viewBPOs[S.view] || viewBPOs.dms;
+
   const podiumHTML = `<div class="card" style="padding:24px;margin-bottom:20px">
     <h3 style="font-size:17px;font-weight:800;margin-bottom:20px">🏆 Top 3 — By BPO</h3>
     <div style="display:flex;gap:24px;align-items:flex-end">
-      ${buildPodium(d.scores,'Vads','#EE4D2D','#FFF5F2')}
-      <div style="width:1px;background:#E5E7EB;align-self:stretch;flex-shrink:0"></div>
-      ${buildPodium(d.scores,'ePerformax','#2563EB','#EFF6FF')}
-      <div style="width:1px;background:#E5E7EB;align-self:stretch;flex-shrink:0"></div>
-      ${buildPodium(d.scores,'Asia Recruit','#059669','#ECFDF5')}
+      ${bposForView.map(([name,col,bg],idx)=>`${idx>0?'<div style="width:1px;background:#E5E7EB;align-self:stretch;flex-shrink:0"></div>':''}`+buildPodium(d.scores,name,col,bg)).join('')}
     </div>
   </div>`;
 
@@ -904,7 +908,13 @@ function hasAcked(type, id){
 /* ═══ IMPORT/EXPORT ═══ */
 function rAdmChangelog(){
   const versions=[
-    {v:'v3',label:'Version 3',date:'May 2026',bundle:'B5',current:true,updates:[
+    {v:'v4',label:'Version 4',date:'May 2026',bundle:'B5',current:true,updates:[
+      {cat:'🏆 Feature',text:'View-specific BPO podiums — DMS shows Vads + ePerformax, L2RR shows ePerformax only, P1 shows ePerformax + Asia Recruit'},
+      {cat:'🗑️ Admin',text:'Removed all manual data entry from Admin — Cases, Tips, Quiz, Kudos, Reminder tabs removed. All data managed via Google Sheets'},
+      {cat:'🗑️ UI',text:'Removed Kudos tab from navigation and Latest Cases section from Home'},
+      {cat:'📢 Feature',text:'Reminder managed from Google Sheets (Reminder_DMS/L2RR/P1 tabs) — auto-pushed every 5 minutes via Apps Script'},
+    ]},
+    {v:'v3',label:'Version 3',date:'May 2026',bundle:'B5',current:false,updates:[
       {cat:'🐛 Bug Fix',text:'Fixed critical syntax errors (missing function declarations, unclosed braces) that caused blank dashboard on load'},
       {cat:'🔄 Sync',text:'CORS proxy system with 3 automatic fallbacks (corsproxy.io → allorigins.win → cors-anywhere) for Shopee org restrictions'},
       {cat:'🔢 UI',text:'Sync count badge on Sync from Sheets button showing how many times data has been refreshed this session'},
@@ -963,7 +973,7 @@ function rAdmChangelog(){
       <div><h2 style="font-size:20px;font-weight:900;margin-bottom:4px">📋 Version Updates</h2>
       <p style="font-size:13px;color:#6B7280">Full history of WJ Dashboard changes — bundled every 5 internal versions.</p></div>
       <div style="text-align:right"><div style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Current</div>
-      <div style="font-size:22px;font-weight:900;color:#EE4D2D">Version 3</div></div>
+      <div style="font-size:22px;font-weight:900;color:#EE4D2D">Version 4</div></div>
     </div>
     ${versions.map(ver=>`
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;${ver.current?'border:2px solid #EE4D2D':''}">
