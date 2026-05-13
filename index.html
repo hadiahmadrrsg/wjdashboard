@@ -86,6 +86,13 @@ select.inp{cursor:pointer;background:#fff}
     <span style="width:7px;height:7px;border-radius:50%;background:#D97706;flex-shrink:0;display:inline-block"></span>
     <span id="fb-status-text">Connecting…</span>
   </div>
+  <div id="fb-refresh-time" style="font-size:10px;color:#9CA3AF;margin-top:4px;padding:0 4px;display:none">Last synced: —</div>
+  <div id="sheets-sync-row" style="margin-top:8px;display:none">
+    <button onclick="syncFromSheets(false)" style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid #059669;background:#ECFDF5;color:#059669;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;justify-content:center">
+      <span>📊</span><span>Sync from Sheets</span>
+    </button>
+    <div id="sheets-sync-time" style="font-size:10px;color:#9CA3AF;margin-top:4px;padding:0 4px;display:none"></div>
+  </div>
 </div>
 <div id="main"></div>
 <div id="toast"></div>
@@ -142,7 +149,60 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v17';
+const VER='v19';
+
+/* ═══ GOOGLE SHEETS SYNC ═══
+   Paste your Apps Script Web App URL below after deploying.
+   Leave as-is if not using Google Sheets.
+   ══════════════════════════ */
+const SHEETS_URL = 'https://script.google.com/a/macros/shopee.com/s/AKfycbxU0aSGAbersedrmC6Ikl49RUSYYyOT5roDFbtB0zbQ2BMpBiKlV3mYxWeQvZM-00LajQ/exec';
+
+var _sheetsTimer = null;
+var _lastSheetsSync = null;
+const SHEETS_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+
+function sheetsConfigured(){
+  return SHEETS_URL && !SHEETS_URL.includes('PASTE_YOUR');
+}
+
+async function syncFromSheets(silent){
+  if(!sheetsConfigured()) return;
+  try{
+    const res = await fetch(SHEETS_URL);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    ['dms','l2rr','p1'].forEach(v=>{
+      if(!data[v]) return;
+      // Sheets data is source of truth for these 4 fields
+      if(data[v].cases   && data[v].cases.length)   S[v].cases    = data[v].cases;
+      if(data[v].tips    && data[v].tips.length)    S[v].tips     = data[v].tips;
+      if(data[v].customQs && data[v].customQs.length) S[v].customQs = data[v].customQs;
+      if(data[v].kudos   && data[v].kudos.length)   S[v].kudos    = data[v].kudos;
+    });
+    _lastSheetsSync = new Date();
+    updateSheetsSyncTime();
+    if(!silent) toast('✅ Synced from Google Sheets');
+    render();
+  }catch(e){
+    console.warn('Sheets sync failed:', e);
+    if(!silent) toast('⚠️ Sheets sync failed','error');
+  }
+}
+
+function updateSheetsSyncTime(){
+  const el = document.getElementById('sheets-sync-time');
+  if(!el || !_lastSheetsSync) return;
+  const t = _lastSheetsSync.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const d = _lastSheetsSync.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  el.textContent = 'Sheets: '+d+' '+t;
+  el.style.display = 'block';
+}
+
+function startSheetsTimer(){
+  if(!sheetsConfigured()) return;
+  clearInterval(_sheetsTimer);
+  _sheetsTimer = setInterval(()=>syncFromSheets(true), SHEETS_INTERVAL_MS);
+}
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -232,11 +292,23 @@ function fbConfigured(){
 function fbStatus(state){
   const el=document.getElementById('fb-status');
   const txt=document.getElementById('fb-status-text');
+  const timeEl=document.getElementById('fb-refresh-time');
   if(!el||!txt)return;
   const map={ok:['#ECFDF5','#059669','🟢 Synced'],err:['#FEF2F2','#DC2626','🔴 Not connected'],warn:['#FEF3C7','#D97706','🟡 Connecting…'],local:['#F3F4F6','#6B7280','⚫ Local only']};
   const [bg,col,label]=map[state]||map.warn;
   el.style.background=bg;el.style.color=col;txt.textContent=label;
   el.querySelector('span').style.background=col;
+  if(timeEl){
+    if(state==='ok'){
+      const now=new Date();
+      const t=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      const d=now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      timeEl.textContent='Last synced: '+d+', '+t;
+      timeEl.style.display='block';
+    } else if(state==='local'){
+      timeEl.style.display='none';
+    }
+  }
 }
 
 function initFirebase(){
@@ -616,6 +688,7 @@ function rScores(){const d=V();
 
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">📝 Quiz Scores</h1>
   ${podiumHTML}
+  <h3 style="font-size:15px;font-weight:800;margin-bottom:10px">📊 Your Score Summary${_currentUsername?' — <span style="color:#EE4D2D">'+esc(_currentUsername)+'</span>':''}</h3>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
     <div class="card text-center" style="padding:18px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:6px">Total Correct</div><div style="font-size:28px;font-weight:900;color:#059669">${tc}</div></div>
     <div class="card text-center" style="padding:18px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:6px">Total Errors</div><div style="font-size:28px;font-weight:900;color:#DC2626">${te}</div></div>
@@ -732,9 +805,15 @@ function rAdmReminder(){const d=V();
   return `<div class="card" style="padding:24px"><h3 style="font-size:17px;font-weight:800;margin-bottom:16px">📢 Weekly Reminder Banner</h3>
   <p style="font-size:13px;color:#6B7280;margin-bottom:12px">This text appears on the dashboard banner. Edit it to update the weekly reminder for agents.</p>
   <textarea class="inp" id="adm-reminder" rows="4" style="margin-bottom:12px">${esc(d.reminder)}</textarea>
-  <button class="btn-primary" onclick="saveReminder()">💾 Save Reminder</button></div>`;
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn-primary" onclick="saveReminder()">💾 Save Reminder</button>
+    <button style="padding:10px 20px;border-radius:10px;border:1.5px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="deleteReminder()">🗑 Delete</button>
+    <button style="padding:10px 20px;border-radius:10px;border:1.5px solid #6B7280;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="undoReminder()">↩ Undo</button>
+  </div></div>`;
 }
-function saveReminder(){V().reminder=$('adm-reminder').value;toast('Reminder updated!');render();}
+function saveReminder(){V()._reminderUndo=V().reminder;V().reminder=$('adm-reminder').value;toast('Reminder updated!');render();}
+function deleteReminder(){V()._reminderUndo=V().reminder;V().reminder='';toast('Reminder cleared.');render();}
+function undoReminder(){if(V()._reminderUndo!==undefined){V().reminder=V()._reminderUndo;toast('Reminder restored.');render();}else{toast('Nothing to undo.','error');}}
 
 /* ═══ IMPORT/EXPORT ═══ */
 function rAdmIO(){return `<div class="g3 mb16">${[{t:'cases',ic:'📋',l:'WJ Cases'},{t:'tips',ic:'💡',l:'QA Tips'},{t:'quiz',ic:'🧠',l:'Quiz Questions'}].map(({t,ic,l})=>`<div class="card text-center" style="padding:24px"><div style="font-size:32px;margin-bottom:10px">${ic}</div><h3 style="font-size:15px;font-weight:800;margin-bottom:4px">${l}</h3><p style="font-size:12px;color:#6B7280;margin-bottom:14px">Import or export</p>
@@ -763,8 +842,18 @@ _fileCallbacks['nc-img']=function(d){V()._ncImgData=d;};
 _fileCallbacks['nc-vid']=function(d){V()._ncVidData=d;};
 _fileCallbacks['nt-img']=function(d){V()._ntImgData=d;};
 _fileCallbacks['nt-vid']=function(d){V()._ntVidData=d;};
+/* Show Sheets sync button if configured */
+if(sheetsConfigured()){
+  const row = document.getElementById('sheets-sync-row');
+  if(row) row.style.display='block';
+}
 /* Init Firebase — loads all shared data, then renders */
 initFirebase();
+/* Start Sheets auto-sync timer (runs independently of Firebase) */
+if(sheetsConfigured()){
+  syncFromSheets(true);   // initial fetch on load
+  startSheetsTimer();      // then every 30 min
+}
 </script>
 </body>
 </html>
