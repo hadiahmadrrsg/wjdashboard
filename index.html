@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v14</title>
+<title>WJ Dashboard v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -87,17 +87,12 @@ select.inp{cursor:pointer;background:#fff}
     <span id="fb-status-text">Connecting…</span>
   </div>
   <div id="fb-refresh-time" style="font-size:10px;color:#9CA3AF;margin-top:4px;padding:0 4px;display:none">Last synced: —</div>
-  <div id="sheets-sync-row" style="margin-top:8px;display:none">
-    <button onclick="syncFromSheets(false)" style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid #059669;background:#ECFDF5;color:#059669;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;justify-content:center">
-      <span>📊</span><span>Sync from Sheets</span>
-    </button>
-    <div id="sheets-sync-time" style="font-size:10px;color:#9CA3AF;margin-top:4px;padding:0 4px;display:none"></div>
-  </div>
+  <div id="sheet-sync-badge" style="font-size:10px;color:#059669;font-weight:700;margin-top:4px;padding:0 4px;display:none"></div>
 </div>
 <div id="main"></div>
 <div id="toast"></div>
 <input type="file" id="file-import" accept=".xlsx,.xls" style="display:none">
-<!-- Username Modal -->
+<!-- Paste JSON Modal -->
 <div id="username-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:20px;padding:40px 36px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center">
     <div style="font-size:48px;margin-bottom:12px">🧠</div>
@@ -124,7 +119,9 @@ function mkView(sampleCases,sampleTips,sampleQs,sampleKudos){
     undoCases:[],undoTips:[],undoQs:[],undoKudos:[],
     _prefillCaseWeek:'',_prefillTipWeek:'',_qFormAns:0,_importTarget:'',
     _ncImgData:'',_ncVidData:'',_ntImgData:'',_ntVidData:'',
-    reminder:'Check seller name before applying SOP. Read buyer remarks fully. Validate evidence before requesting more.',
+    reminder:['','','','',''],
+    _reminderUndo:null,
+    acks:[],  // [{type:'case'|'tip', id, username, bpo, date}]
   };
 }
 
@@ -149,60 +146,7 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v19';
-
-/* ═══ GOOGLE SHEETS SYNC ═══
-   Paste your Apps Script Web App URL below after deploying.
-   Leave as-is if not using Google Sheets.
-   ══════════════════════════ */
-const SHEETS_URL = 'https://script.google.com/a/macros/shopee.com/s/AKfycbxU0aSGAbersedrmC6Ikl49RUSYYyOT5roDFbtB0zbQ2BMpBiKlV3mYxWeQvZM-00LajQ/exec';
-
-var _sheetsTimer = null;
-var _lastSheetsSync = null;
-const SHEETS_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
-
-function sheetsConfigured(){
-  return SHEETS_URL && !SHEETS_URL.includes('PASTE_YOUR');
-}
-
-async function syncFromSheets(silent){
-  if(!sheetsConfigured()) return;
-  try{
-    const res = await fetch(SHEETS_URL);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data = await res.json();
-    ['dms','l2rr','p1'].forEach(v=>{
-      if(!data[v]) return;
-      // Sheets data is source of truth for these 4 fields
-      if(data[v].cases   && data[v].cases.length)   S[v].cases    = data[v].cases;
-      if(data[v].tips    && data[v].tips.length)    S[v].tips     = data[v].tips;
-      if(data[v].customQs && data[v].customQs.length) S[v].customQs = data[v].customQs;
-      if(data[v].kudos   && data[v].kudos.length)   S[v].kudos    = data[v].kudos;
-    });
-    _lastSheetsSync = new Date();
-    updateSheetsSyncTime();
-    if(!silent) toast('✅ Synced from Google Sheets');
-    render();
-  }catch(e){
-    console.warn('Sheets sync failed:', e);
-    if(!silent) toast('⚠️ Sheets sync failed','error');
-  }
-}
-
-function updateSheetsSyncTime(){
-  const el = document.getElementById('sheets-sync-time');
-  if(!el || !_lastSheetsSync) return;
-  const t = _lastSheetsSync.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  const d = _lastSheetsSync.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  el.textContent = 'Sheets: '+d+' '+t;
-  el.style.display = 'block';
-}
-
-function startSheetsTimer(){
-  if(!sheetsConfigured()) return;
-  clearInterval(_sheetsTimer);
-  _sheetsTimer = setInterval(()=>syncFromSheets(true), SHEETS_INTERVAL_MS);
-}
+const VER='v3';
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -289,6 +233,17 @@ function fbConfigured(){
   return FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('PASTE_YOUR');
 }
 
+function updateSheetSyncBadge(isoString){
+  const el = document.getElementById('sheet-sync-badge');
+  if(!el) return;
+  try{
+    const d = new Date(isoString);
+    const label = d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    el.textContent = '📊 Sheet synced: '+label;
+    el.style.display = 'block';
+  }catch(e){}
+}
+
 function fbStatus(state){
   const el=document.getElementById('fb-status');
   const txt=document.getElementById('fb-status-text');
@@ -354,21 +309,28 @@ function fbPath(view, field){
 /* Load all views from Firebase, then subscribe to live updates */
 function loadAllFromFirebase(){
   const views = ['dms','l2rr','p1'];
-  const fields = ['cases','tips','customQs','kudos','reminder','scores'];
-  let pending = views.length * fields.length;
+  const fields = ['cases','tips','customQs','kudos','reminder','scores','acks'];
+  let pending = views.length * fields.length + 1; // +1 for _lastSheetSync
+
+  function done(){ pending--; if(pending===0){ render(); fbStatus('ok'); subscribeAll(); } }
+
+  // Read last sheet push timestamp set by Apps Script trigger
+  _fbDB.ref('_lastSheetSync').once('value', snap => {
+    if(snap.val()) updateSheetSyncBadge(snap.val());
+    _fbDB.ref('_lastSheetSync').on('value', s => { if(s.val()) updateSheetSyncBadge(s.val()); });
+    done();
+  }, () => done());
 
   views.forEach(v => {
     fields.forEach(f => {
-      const ref = _fbDB.ref(fbPath(v, f));
-      ref.once('value', snap => {
+      _fbDB.ref(fbPath(v,f)).once('value', snap => {
         const val = snap.val();
         if(val !== null){
-          if(f === 'reminder'){ S[v].reminder = val; }
-          else { S[v][f] = Array.isArray(val) ? val : Object.values(val || {}); }
+          if(f==='reminder'){ const a=Array.isArray(val)?val:(val?[val]:[]);while(a.length<5)a.push('');S[v].reminder=a; }
+          else{ S[v][f]=Array.isArray(val)?val:Object.values(val||{}); }
         }
-        pending--;
-        if(pending === 0){ render(); fbStatus('ok'); subscribeAll(); }
-      }, () => { pending--; if(pending===0){ render(); fbStatus('ok'); subscribeAll(); } });
+        done();
+      }, () => done());
     });
   });
 }
@@ -376,7 +338,7 @@ function loadAllFromFirebase(){
 /* Live listeners — update state & re-render when another user changes data */
 function subscribeAll(){
   const views = ['dms','l2rr','p1'];
-  const fields = ['cases','tips','customQs','kudos','reminder','scores'];
+  const fields = ['cases','tips','customQs','kudos','reminder','scores','acks'];
   views.forEach(v => {
     fields.forEach(f => {
       const key = v+':'+f;
@@ -384,7 +346,7 @@ function subscribeAll(){
       const ref = _fbDB.ref(fbPath(v, f));
       _fbListeners[key] = ref.on('value', snap => {
         const val = snap.val();
-        if(f === 'reminder'){ S[v].reminder = val || S[v].reminder; }
+        if(f === 'reminder'){ const v5=Array.isArray(val)?val:(val?[val]:[]);while(v5.length<5)v5.push('');S[v].reminder=v5; }
         else { S[v][f] = val ? (Array.isArray(val) ? val : Object.values(val)) : []; }
         render();
       });
@@ -407,7 +369,7 @@ function autoSave(viewKey){
   // Debounce 600ms to avoid writes on every keystroke
   clearTimeout(_saveDebounce[viewKey]);
   _saveDebounce[viewKey] = setTimeout(() => {
-    ['cases','tips','customQs','kudos','reminder','scores'].forEach(f => saveToFirebase(viewKey, f));
+    ['cases','tips','customQs','kudos','reminder','scores','acks'].forEach(f => saveToFirebase(viewKey, f));
   }, 600);
 }
 const viewColors={dms:'#EE4D2D',l2rr:'#2563EB',p1:'#7C3AED'};
@@ -489,7 +451,7 @@ function rDash(){const d=V();const vn=viewNames[S.view];const vc=viewColors[S.vi
   <p style="font-size:15px;font-weight:600;margin-bottom:16px">Learn from mistakes. Improve every week.</p>
   <div style="background:linear-gradient(135deg,${vc},${vc}cc);border-radius:14px;padding:16px 24px;margin-bottom:24px;color:#fff;font-size:14px;font-weight:600;line-height:1.6;box-shadow:0 4px 20px ${vc}33;display:flex;align-items:center;gap:14px">
     <div style="font-size:28px;flex-shrink:0">🚨</div>
-    <div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.85;margin-bottom:4px">Weekly Reminder — ${esc(lat)}</div><div>${esc(d.reminder)}</div></div>
+    <div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.85;margin-bottom:6px">Weekly Reminders — ${esc(lat)}</div>${(Array.isArray(d.reminder)?d.reminder:[]).filter(r=>r&&r.trim()).map((r,i)=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px"><span style="flex-shrink:0;background:rgba(255,255,255,.3);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">${i+1}</span><span>${esc(r)}</span></div>`).join('')||'<span style="opacity:.7;font-size:13px">No reminders set.</span>'}</div>
   </div>
   <div class="stat-grid">
     <div class="card stat-card"><div class="stat-label">Weeks <span style="font-size:24px">📅</span></div><div class="stat-val" style="color:#2563EB">${aw.length}</div></div>
@@ -560,15 +522,32 @@ function rCases(){const d=V();const ws=['All',...uv(d.cases,'week')];const ts=['
     ${c.keyLesson?`<div style="font-size:12px;color:#059669;font-weight:600;background:#ECFDF5;padding:6px 12px;border-radius:8px;display:inline-block">💡 ${esc(c.keyLesson)}</div>`:''}
   </div>`).join('')}`).join('')}</div>`;}
 
+/* Convert Google Drive share URL to direct embeddable URL */
+function driveEmbed(url){
+  if(!url) return '';
+  // Handle /file/d/FILE_ID/view or /open?id=FILE_ID
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if(m) return 'https://drive.google.com/uc?export=view&id='+m[1];
+  return url; // not a Drive URL, return as-is
+}
+function driveVideo(url){
+  if(!url) return '';
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if(m) return 'https://drive.google.com/file/d/'+m[1]+'/preview';
+  return url;
+}
+function isDriveUrl(url){ return url && url.includes('drive.google.com'); }
+
 function rCaseDetail(){const c=V().sel;if(!c)return '';
   return `<div><button class="btn-outline" style="padding:8px 16px;margin-bottom:16px" onclick="V().sel=null;render()">← Back</button>
   <div class="card" style="padding:0;overflow:hidden"><div style="background:linear-gradient(135deg,#EE4D2D,#FF6B47);padding:24px 28px;color:#fff">
     <div style="font-size:11px;opacity:.8;margin-bottom:4px">ID: ${esc(c.id)}</div><h2 style="font-size:22px;font-weight:900">${esc(c.returnReason)}</h2>
     <div class="flex-w mt8"><span style="background:rgba(255,255,255,.2);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600">${esc(c.week)}</span></div></div>
   <div style="padding:24px 28px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:24px;padding:14px 18px;background:#FFF5F2;border-radius:12px;flex-wrap:wrap">${badge(c.rcaL1,'#fff','#DC2626')} <span style="color:#6B7280;font-weight:700">→</span> ${badge(c.rcaL2,'#EE4D2D','#FDDDD4')} <span style="color:#6B7280;font-weight:700">→</span> ${badge(c.rcaL3,'#D94420','#FFF5F2')}</div>
-  ${[{l:'📝 Findings',v:c.findings},{l:'🎯 Pain Point',v:c.painPoint},{l:'🗣️ Coaching',v:c.coaching},{l:'💡 Key Lesson',v:c.keyLesson}].filter(s=>s.v).map(s=>`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">${s.l}</div><div style="font-size:14px;line-height:1.8;padding:14px 18px;background:#F3F4F6;border-radius:12px">${esc(s.v)}</div></div>`).join('')}
-  ${c.imageUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;margin-bottom:8px">📷 Evidence Image</div><img src="${esc(c.imageUrl)}" style="max-width:100%;border-radius:12px;border:1px solid #E5E7EB" onerror="this.style.display='none'"></div>`:''}
-  ${c.videoUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;margin-bottom:8px">🎥 Evidence Video</div><video src="${esc(c.videoUrl)}" controls style="max-width:100%;border-radius:12px" onerror="this.style.display='none'"></video></div>`:''}
+  ${[{l:'📝 Findings',v:c.findings},{l:'🎯 Pain Point',v:c.painPoint},{l:'💡 Key Lesson',v:c.keyLesson}].filter(s=>s.v).map(s=>`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">${s.l}</div><div style="font-size:14px;line-height:1.8;padding:14px 18px;background:#F3F4F6;border-radius:12px">${esc(s.v)}</div></div>`).join('')}
+  ${c.imageUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;margin-bottom:8px">📷 Evidence Image</div>${isDriveUrl(c.imageUrl)?`<img src="${esc(driveEmbed(c.imageUrl))}" style="max-width:100%;border-radius:12px;border:1px solid #E5E7EB" onerror="this.outerHTML='<a href=\''+${JSON.stringify(c.imageUrl)}+'\' target=\'_blank\' class=\'btn-primary\' style=\'display:inline-block;padding:10px 20px;text-decoration:none\'>🔗 Open Image in Drive</a>'">`:  `<img src="${esc(c.imageUrl)}" style="max-width:100%;border-radius:12px;border:1px solid #E5E7EB" onerror="this.style.display='none'">`}</div>`:''} 
+  ${c.videoUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;margin-bottom:8px">🎥 Evidence Video</div>${isDriveUrl(c.videoUrl)?`<iframe src="${esc(driveVideo(c.videoUrl))}" style="width:100%;aspect-ratio:16/9;border-radius:12px;border:none" allowfullscreen></iframe>`:`<video src="${esc(c.videoUrl)}" controls style="max-width:100%;border-radius:12px" onerror="this.style.display='none'"></video>`}</div>`:''}
+  <div style="margin-top:8px;padding-top:20px;border-top:1px solid #F3F4F6">${hasAcked('case',c.id)?`<div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:12px;background:#ECFDF5;border:1.5px solid #059669"><span style="font-size:16px">✅</span><span style="font-size:13px;font-weight:700;color:#059669">You acknowledged this case</span></div>`:  `<button class="btn-primary" style="background:linear-gradient(135deg,#059669,#10B981)" onclick="acknowledge('case','${esc(c.id)}')">✅ I've Read & Understood This</button>`}</div>
   </div></div></div>`;}
 
 /* ═══ TIPS ═══ */
@@ -580,9 +559,9 @@ function rTips(){const d=V();const cs=['All',...uv(d.tips,'category')];const tw=
     <span class="filter-label">Week:</span>${dd('tw',d.tipWeekF,tw,'All Weeks','V().tipWeekF=this.value;render()')}
     <span class="filter-label">Search:</span><input class="inp" style="flex:1;min-width:180px" placeholder="Search..." value="${esc(d.tipKeyword)}" oninput="V().tipKeyword=this.value;render()">
   </div></div>
-  ${groupByWeek(f).map(([w,wt])=>`<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>${wt.map(t=>{const ex=d.expandedTip===t.id;return `<div class="card card-hover pointer" style="padding:18px 22px;${ex?'border-color:#EE4D2D':''}" onclick="V().expandedTip=${ex?'null':t.id};render()">
-    <div class="flex-sb"><div class="flex-c"><span style="font-size:16px;font-weight:800">${esc(t.title)}</span>${badge(t.category,'#2563EB','#EFF6FF')}</div><div class="flex-c"><span style="font-size:12px;color:#6B7280">${esc(t.date)}</span><span style="color:#6B7280;font-size:13px;transform:rotate(${ex?180:0}deg)">▼</span></div></div>
-    ${ex?`<div class="tip-expanded">${esc(t.tip)}${t.imageUrl?`<div style="margin-top:12px"><img src="${esc(t.imageUrl)}" style="max-width:100%;border-radius:8px" onerror="this.style.display='none'"></div>`:''}${t.videoUrl?`<div style="margin-top:12px"><video src="${esc(t.videoUrl)}" controls style="max-width:100%;border-radius:8px"></video></div>`:''}</div>`:`<div style="font-size:13px;color:#6B7280;margin-top:6px">${esc(t.tip).slice(0,80)}...</div>`}
+  ${groupByWeek(f).map(([w,wt])=>`<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>${wt.map(t=>{const ex=d.expandedTip===t.id;const acked=hasAcked('tip',t.id);return `<div class="card card-hover pointer" style="padding:18px 22px;${ex?'border-color:#EE4D2D':''}" onclick="V().expandedTip=${ex?'null':t.id};render()">
+    <div class="flex-sb"><div class="flex-c"><span style="font-size:16px;font-weight:800">${esc(t.title)}</span>${badge(t.category,'#2563EB','#EFF6FF')}${acked?'<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:6px;background:#ECFDF5;color:#059669">✅ Acknowledged</span>':''}</div><div class="flex-c"><span style="font-size:12px;color:#6B7280">${esc(t.date)}</span><span style="color:#6B7280;font-size:13px;transform:rotate(${ex?180:0}deg)">▼</span></div></div>
+    ${ex?`<div class="tip-expanded" onclick="event.stopPropagation()">${esc(t.tip)}${t.imageUrl?`<div style="margin-top:12px"><img src="${esc(t.imageUrl)}" style="max-width:100%;border-radius:8px" onerror="this.style.display='none'"></div>`:''}${t.videoUrl?`<div style="margin-top:12px"><video src="${esc(t.videoUrl)}" controls style="max-width:100%;border-radius:8px"></video></div>`:''}<div style="margin-top:14px;padding-top:14px;border-top:1px solid #E5E7EB">${acked?`<div style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;background:#ECFDF5;border:1.5px solid #059669"><span>✅</span><span style="font-size:13px;font-weight:700;color:#059669">You acknowledged this tip</span></div>`:`<button class="btn-primary" style="background:linear-gradient(135deg,#059669,#10B981)" onclick="event.stopPropagation();acknowledge('tip','${t.id}')">✅ I've Read & Understood This</button>`}</div></div>`:`<div style="font-size:13px;color:#6B7280;margin-top:6px">${esc(t.tip).slice(0,80)}...</div>`}
   </div>`;}).join('')}`).join('')}</div>`;}
 
 /* ═══ QUIZ ═══ */
@@ -708,8 +687,8 @@ ${d.ok?`<div style="font-size:13px"><span style="font-weight:700;color:#059669">
 
 /* ═══ ADMIN ═══ */
 function rAdmin(){const d=V();
-  const tabs=[{k:'cases',l:'📋 Cases',c:d.cases.length},{k:'tips',l:'💡 Tips',c:d.tips.length},{k:'quiz',l:'🧠 Quiz Qs',c:d.customQs.length},{k:'kudos',l:'🏆 Kudos',c:d.kudos.length},{k:'reminder',l:'📢 Reminder'},{k:'import',l:'📁 Import/Export'}];
-  let ct='';switch(d.adminSub){case 'cases':ct=rAdmCases();break;case 'tips':ct=rAdmTips();break;case 'quiz':ct=rAdmQuiz();break;case 'kudos':ct=rAdmKudos();break;case 'reminder':ct=rAdmReminder();break;case 'import':ct=rAdmIO();break;}
+  const tabs=[{k:'cases',l:'📋 Cases',c:d.cases.length},{k:'tips',l:'💡 Tips',c:d.tips.length},{k:'quiz',l:'🧠 Quiz Qs',c:d.customQs.length},{k:'kudos',l:'🏆 Kudos',c:d.kudos.length},{k:'reminder',l:'📢 Reminder'},{k:'userstats',l:'👥 User Stats'},{k:'import',l:'📁 Import/Export'},{k:'changelog',l:'📋 Version Updates'}];
+  let ct='';switch(d.adminSub){case 'cases':ct=rAdmCases();break;case 'tips':ct=rAdmTips();break;case 'quiz':ct=rAdmQuiz();break;case 'kudos':ct=rAdmKudos();break;case 'reminder':ct=rAdmReminder();break;case 'userstats':ct=rAdmUserStats();break;case 'import':ct=rAdmIO();break;case 'changelog':ct=rAdmChangelog();break;}
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:2px">⚙️ Admin — ${viewNames[S.view]}</h1><p style="font-size:13px;color:#6B7280;margin-bottom:20px">Manage cases, tips, quiz, kudos, and data.</p>
   <div class="flex-w mb16">${tabs.map(t=>`<button style="padding:10px 20px;border-radius:10px;border:1.5px solid ${d.adminSub===t.k?'#EE4D2D':'#E5E7EB'};background:${d.adminSub===t.k?'#FFF5F2':'#fff'};color:${d.adminSub===t.k?'#EE4D2D':'#6B7280'};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="V().adminSub='${t.k}';render()">${t.l}${t.c!==undefined?' <span style="opacity:.7">('+t.c+')</span>':''}</button>`).join('')}</div>${ct}</div>`;}
 
@@ -723,16 +702,16 @@ function rAdmCases(){const d=V();const wks=['All',...uv(d.cases,'week')];const f
   ${wc.map(c=>`<div class="card" style="padding:16px 20px;display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:14px;font-weight:700">${esc(c.returnReason)}</div><div style="font-size:12px;color:#6B7280;margin-top:2px">${esc(c.rcaL3)}</div></div>
   <button class="btn-sm btn-edit" onclick="editCase('${c.id}')">✏️ Edit</button><button class="btn-sm btn-del" onclick="delCase('${c.id}')">🗑 Delete</button></div>`).join('')}`).join('')}`;}
 function rAddCaseForm(){const pw=V()._prefillCaseWeek||'';return `<div class="card mb16" style="border-color:#EE4D2D;padding:20px"><div class="flex-sb mb8"><div style="font-size:13px;font-weight:800;color:#EE4D2D">➕ New Case</div><button style="border:none;background:none;color:#6B7280;font-size:18px;cursor:pointer" onclick="V().showAddCase=false;render()">✕</button></div>
-${['id','returnReason','agent','rcaL1','rcaL2','rcaL3'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><input class="inp" id="nc-${k}" placeholder="${k}"></div>`).join('')}
+${['id','returnReason','rcaL1','rcaL2','rcaL3'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><input class="inp" id="nc-${k}" placeholder="${k}"></div>`).join('')}
 <div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">week</label><input class="inp" id="nc-week" value="${esc(pw)}"></div>
-${['findings','coaching','painPoint','keyLesson'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><textarea class="inp" id="nc-${k}" rows="2"></textarea></div>`).join('')}
+${['findings','painPoint','keyLesson'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><textarea class="inp" id="nc-${k}" rows="2"></textarea></div>`).join('')}
 <div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">📷 Evidence Image</label>${dropZone('nc-img','','Drop image or click to upload')}</div>
 <div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">🎥 Evidence Video</label>${dropZone('nc-vid','','Drop video or click to upload')}</div>
 <div class="flex-c mt8"><button class="btn-primary" onclick="addCase()">💾 Save</button></div></div>`;}
-function addCase(){const d=V();const fs=['id','returnReason','week','agent','rcaL1','rcaL2','rcaL3','findings','coaching','painPoint','keyLesson'];const c={};fs.forEach(k=>{const el=$('nc-'+k);c[k]=el?el.value:'';});if(!c.returnReason||!c.week){toast('Return reason & week required','error');return;}if(!c.id)c.id=String(Date.now());c.imageUrl=d._ncImgData||'';c.videoUrl=d._ncVidData||'';d._ncImgData='';d._ncVidData='';d.cases.push(c);d.showAddCase=false;toast('Case added!');render();}
+function addCase(){const d=V();const fs=['id','returnReason','week','rcaL1','rcaL2','rcaL3','findings','painPoint','keyLesson'];const c={};fs.forEach(k=>{const el=$('nc-'+k);c[k]=el?el.value:'';});if(!c.returnReason||!c.week){toast('Return reason & week required','error');return;}if(!c.id)c.id=String(Date.now());c.imageUrl=d._ncImgData||'';c.videoUrl=d._ncVidData||'';d._ncImgData='';d._ncVidData='';d.cases.push(c);d.showAddCase=false;toast('Case added!');render();}
 function rEditCaseForm(){const c=V().editingCase;return `<div class="card mb16" style="border-color:#EE4D2D;padding:20px"><div style="font-size:13px;font-weight:800;color:#EE4D2D;margin-bottom:10px">✏️ Editing: ${esc(c.id)}</div>
-${['returnReason','week','agent','rcaL1','rcaL2','rcaL3'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><input class="inp" value="${esc(c[k]||'')}" oninput="V().editingCase.${k}=this.value"></div>`).join('')}
-${['findings','coaching','painPoint','keyLesson'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><textarea class="inp" rows="2" oninput="V().editingCase.${k}=this.value">${esc(c[k]||'')}</textarea></div>`).join('')}
+${['returnReason','week','rcaL1','rcaL2','rcaL3'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><input class="inp" value="${esc(c[k]||'')}" oninput="V().editingCase.${k}=this.value"></div>`).join('')}
+${['findings','painPoint','keyLesson'].map(k=>`<div class="mb8"><label style="font-size:11px;font-weight:700;color:#6B7280;display:block;margin-bottom:4px">${k}</label><textarea class="inp" rows="2" oninput="V().editingCase.${k}=this.value">${esc(c[k]||'')}</textarea></div>`).join('')}
 <div class="flex-c mt8"><button class="btn-primary" onclick="saveEditCase()">💾 Save</button><button class="btn-outline" onclick="V().editingCase=null;render()">Cancel</button></div></div>`;}
 function editCase(id){V().editingCase={...V().cases.find(c=>c.id===id)};render();}
 function saveEditCase(){const d=V();if(!d.editingCase)return;d.cases=d.cases.map(c=>c.id===d.editingCase.id?{...d.editingCase}:c);d.editingCase=null;toast('Updated');render();}
@@ -801,25 +780,255 @@ function saveEditKudos(){const d=V();if(!d.editingKudos)return;const i=d.editing
 function delKudos(i){const d=V();d.undoKudos.push({data:d.kudos[i],idx:i});d.kudos.splice(i,1);toast('Deleted');render();}
 function undoKudos(){const d=V();if(!d.undoKudos.length)return;const l=d.undoKudos.pop();d.kudos.splice(l.idx,0,l.data);toast('Restored');render();}
 
-function rAdmReminder(){const d=V();
-  return `<div class="card" style="padding:24px"><h3 style="font-size:17px;font-weight:800;margin-bottom:16px">📢 Weekly Reminder Banner</h3>
-  <p style="font-size:13px;color:#6B7280;margin-bottom:12px">This text appears on the dashboard banner. Edit it to update the weekly reminder for agents.</p>
-  <textarea class="inp" id="adm-reminder" rows="4" style="margin-bottom:12px">${esc(d.reminder)}</textarea>
-  <div style="display:flex;gap:10px;flex-wrap:wrap">
-    <button class="btn-primary" onclick="saveReminder()">💾 Save Reminder</button>
-    <button style="padding:10px 20px;border-radius:10px;border:1.5px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="deleteReminder()">🗑 Delete</button>
+function rAdmUserStats(){
+  /* Collect all scores across all views */
+  const allScores = ['dms','l2rr','p1'].flatMap(v => (S[v].scores||[]).map(s=>({...s,view:v.toUpperCase()})));
+  if(!allScores.length) return `<div class="card" style="padding:40px;text-align:center"><div style="font-size:48px;margin-bottom:12px">👥</div><h3 style="font-weight:800;margin-bottom:8px">No quiz data yet</h3><p style="color:#6B7280;font-size:13px">User stats will appear here once agents start taking quizzes.</p></div>`;
+
+  /* Per-user stats */
+  const byUser={};
+  allScores.forEach(s=>{
+    const u=s.username||'Unknown'; const b=s.bpo||'—';
+    if(!byUser[u]) byUser[u]={username:u,bpo:b,attempts:0,totalPct:0,best:0,worst:100,views:new Set(),lastDate:''};
+    byUser[u].attempts++;
+    byUser[u].totalPct+=s.pct;
+    byUser[u].best=Math.max(byUser[u].best,s.pct);
+    byUser[u].worst=Math.min(byUser[u].worst,s.pct);
+    byUser[u].views.add(s.view);
+    if(!byUser[u].lastDate||s.date>byUser[u].lastDate) byUser[u].lastDate=s.date;
+  });
+  const users=Object.values(byUser).map(u=>({...u,avg:Math.round(u.totalPct/u.attempts),views:[...u.views]})).sort((a,b)=>b.avg-a.avg);
+
+  /* Per-BPO stats */
+  const byBPO={};
+  allScores.forEach(s=>{
+    const b=s.bpo||'Unknown';
+    if(!byBPO[b]) byBPO[b]={bpo:b,attempts:0,totalPct:0,users:new Set()};
+    byBPO[b].attempts++; byBPO[b].totalPct+=s.pct; byBPO[b].users.add(s.username||'?');
+  });
+  const bpos=Object.values(byBPO).map(b=>({...b,avg:Math.round(b.totalPct/b.attempts),userCount:b.users.size}));
+
+  /* Per-user ack counts across all views */
+  const allAcks = ['dms','l2rr','p1'].flatMap(v=>(S[v].acks||[]).map(a=>({...a,view:v.toUpperCase()})));
+  const ackByUser={};
+  allAcks.forEach(a=>{ const u=a.username||'?'; if(!ackByUser[u]) ackByUser[u]={cases:0,tips:0}; if(a.type==='case') ackByUser[u].cases++; else if(a.type==='tip') ackByUser[u].tips++; });
+
+  const bpoColor=b=>b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':'#6B7280';
+  const bpoBg=b=>b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':'#F3F4F6';
+  const scoreColor=p=>p>=80?'#059669':p>=50?'#D97706':'#DC2626';
+  const scoreBg=p=>p>=80?'#ECFDF5':p>=50?'#FFFBEB':'#FEF2F2';
+
+  return `<div>
+  <!-- Summary strip -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Total Users</div><div style="font-size:28px;font-weight:900;color:#2563EB">${users.length}</div></div>
+    <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Total Attempts</div><div style="font-size:28px;font-weight:900;color:#EE4D2D">${allScores.length}</div></div>
+    <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Overall Avg</div><div style="font-size:28px;font-weight:900;color:${scoreColor(Math.round(allScores.reduce((a,s)=>a+s.pct,0)/allScores.length))}">${Math.round(allScores.reduce((a,s)=>a+s.pct,0)/allScores.length)}%</div></div>
+    <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Acknowledgements</div><div style="font-size:28px;font-weight:900;color:#059669">${allAcks.length}</div></div>
+  </div>
+
+  <!-- BPO comparison -->
+  <div class="card" style="padding:20px;margin-bottom:20px">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:14px">🏢 BPO Comparison</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      ${bpos.map(b=>`<div style="flex:1;min-width:140px;padding:16px;border-radius:12px;background:${bpoBg(b.bpo)};border:2px solid ${bpoColor(b.bpo)}">
+        <div style="font-size:13px;font-weight:900;color:${bpoColor(b.bpo)};margin-bottom:8px">${esc(b.bpo)}</div>
+        <div style="font-size:26px;font-weight:900;color:${scoreColor(b.avg)};margin-bottom:4px">${b.avg}%</div>
+        <div style="font-size:11px;color:#6B7280">${b.userCount} user${b.userCount!==1?'s':''} · ${b.attempts} attempt${b.attempts!==1?'s':''}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- Per-user table -->
+  <div class="card" style="padding:20px">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:14px">👤 Per-User Breakdown</h3>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:2px solid #E5E7EB">
+          <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">User</th>
+          <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">BPO</th>
+          <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Attempts</th>
+          <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Avg</th>
+          <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Best</th>
+          <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Worst</th>
+          <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Cases Acked</th>
+          <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Tips Acked</th>
+          <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Views Taken</th>
+          <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Last Active</th>
+        </tr></thead>
+        <tbody>${users.map((u,i)=>`<tr style="border-bottom:1px solid #F3F4F6;background:${i%2?'#FAFAFA':'#fff'}">
+          <td style="padding:10px 12px;font-weight:700">${esc(u.username)}</td>
+          <td style="padding:10px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${bpoBg(u.bpo)};color:${bpoColor(u.bpo)}">${esc(u.bpo)}</span></td>
+          <td style="padding:10px 12px;text-align:center;font-weight:700">${u.attempts}</td>
+          <td style="padding:10px 12px;text-align:center"><span style="font-weight:900;color:${scoreColor(u.avg)};background:${scoreBg(u.avg)};padding:2px 8px;border-radius:6px">${u.avg}%</span></td>
+          <td style="padding:10px 12px;text-align:center;font-weight:700;color:#059669">${u.best}%</td>
+          <td style="padding:10px 12px;text-align:center;font-weight:700;color:#DC2626">${u.worst}%</td>
+          <td style="padding:10px 12px;text-align:center;font-weight:700;color:#059669">${(ackByUser[u.username]||{}).cases||0}</td>
+          <td style="padding:10px 12px;text-align:center;font-weight:700;color:#2563EB">${(ackByUser[u.username]||{}).tips||0}</td>
+          <td style="padding:10px 12px">${u.views.map(v=>`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#F3F4F6;color:#374151;margin-right:3px">${v}</span>`).join('')}</td>
+          <td style="padding:10px 12px;font-size:12px;color:#6B7280">${esc(u.lastDate)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="padding:20px;margin-top:0">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:14px">✅ Acknowledgement Log</h3>
+    ${allAcks.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:2px solid #E5E7EB">
+        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">User</th>
+        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">BPO</th>
+        <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Type</th>
+        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">View</th>
+        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Date</th>
+      </tr></thead>
+      <tbody>${allAcks.slice().reverse().map((a,i)=>`<tr style="border-bottom:1px solid #F3F4F6;background:${i%2?'#FAFAFA':'#fff'}">
+        <td style="padding:9px 12px;font-weight:700">${esc(a.username||'?')}</td>
+        <td style="padding:9px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${a.bpo==='Vads'?'#FFF5F2':a.bpo==='ePerformax'?'#EFF6FF':'#F3F4F6'};color:${a.bpo==='Vads'?'#EE4D2D':a.bpo==='ePerformax'?'#2563EB':'#6B7280'}">${esc(a.bpo||'—')}</span></td>
+        <td style="padding:9px 12px;text-align:center"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${a.type==='case'?'#FFF5F2':'#EFF6FF'};color:${a.type==='case'?'#EE4D2D':'#2563EB'}">${a.type==='case'?'📋 Case':'💡 Tip'}</span></td>
+        <td style="padding:9px 12px;font-size:12px">${esc(a.view||'')}</td>
+        <td style="padding:9px 12px;font-size:12px;color:#6B7280">${esc(a.date||'')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`:`<p style="font-size:13px;color:#9CA3AF;text-align:center;padding:20px 0">No acknowledgements yet.</p>`}
+  </div></div>`;
+}
+
+function rAdmReminder(){const d=V();const rm=Array.isArray(d.reminder)?[...d.reminder]:['','','','',''];while(rm.length<5)rm.push('');
+  return `<div class="card" style="padding:24px"><h3 style="font-size:17px;font-weight:800;margin-bottom:6px">📢 Weekly Reminder Banner</h3>
+  <p style="font-size:13px;color:#6B7280;margin-bottom:20px">Each reminder is independent. Only filled ones appear on the dashboard. Up to 5.</p>
+  ${[0,1,2,3,4].map(i=>{const filled=rm[i]&&rm[i].trim();return `<div style="padding:16px;border-radius:14px;border:2px solid ${filled?'#EE4D2D':'#E5E7EB'};background:${filled?'#FFF5F2':'#FAFAFA'};margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <label style="font-size:12px;font-weight:800;color:${filled?'#EE4D2D':'#6B7280'};display:flex;align-items:center;gap:6px">
+        <span style="background:${filled?'#EE4D2D':'#D1D5DB'};color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">${i+1}</span>
+        Reminder ${i+1} ${filled?'<span style="font-size:10px;font-weight:700;background:#ECFDF5;color:#059669;padding:1px 6px;border-radius:6px">Active</span>':'<span style="font-size:10px;color:#9CA3AF">Empty</span>'}
+      </label>
+      <div style="display:flex;gap:6px">
+        <button style="padding:5px 12px;border-radius:8px;border:none;background:#EE4D2D;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="saveOneReminder(${i})">💾 Save</button>
+        <button style="padding:5px 12px;border-radius:8px;border:1.5px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="clearOneReminder(${i})">✕ Clear</button>
+      </div>
+    </div>
+    <textarea class="inp" id="adm-reminder-${i}" rows="2" placeholder="Type reminder ${i+1} here…" style="margin-bottom:0;background:#fff">${esc(rm[i]||'')}</textarea>
+  </div>`;}).join('')}
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;padding-top:16px;border-top:1px solid #E5E7EB">
+    <button class="btn-primary" onclick="saveReminder()">💾 Save All</button>
+    <button style="padding:10px 20px;border-radius:10px;border:1.5px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="deleteReminder()">🗑 Clear All</button>
     <button style="padding:10px 20px;border-radius:10px;border:1.5px solid #6B7280;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="undoReminder()">↩ Undo</button>
   </div></div>`;
 }
-function saveReminder(){V()._reminderUndo=V().reminder;V().reminder=$('adm-reminder').value;toast('Reminder updated!');render();}
-function deleteReminder(){V()._reminderUndo=V().reminder;V().reminder='';toast('Reminder cleared.');render();}
-function undoReminder(){if(V()._reminderUndo!==undefined){V().reminder=V()._reminderUndo;toast('Reminder restored.');render();}else{toast('Nothing to undo.','error');}}
+function acknowledge(type, id){
+  if(!_currentUsername){ toast('Please take the quiz first to set your name','error'); return; }
+  const d=V();
+  const already = (d.acks||[]).find(a=>a.type===type&&a.id===String(id)&&a.username===_currentUsername);
+  if(already){ toast('You already acknowledged this '+type,'error'); return; }
+  if(!d.acks) d.acks=[];
+  d.acks.push({type,id:String(id),username:_currentUsername,bpo:_currentBPO||'',date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+  toast('✅ Acknowledged!');
+  render();
+}
+function hasAcked(type, id){ const d=V(); return _currentUsername&&(d.acks||[]).some(a=>a.type===type&&a.id===String(id)&&a.username===_currentUsername); }
+function saveReminder(){const d=V();d._reminderUndo=[...(Array.isArray(d.reminder)?d.reminder:[])];d.reminder=[0,1,2,3,4].map(i=>{const el=$('adm-reminder-'+i);return el?el.value.trim():'';});toast('All reminders saved!');render();}
+function saveOneReminder(i){const d=V();d._reminderUndo=[...(Array.isArray(d.reminder)?d.reminder:[])];const rm=Array.isArray(d.reminder)?[...d.reminder]:['','','','',''];while(rm.length<5)rm.push('');const el=$('adm-reminder-'+i);rm[i]=el?el.value.trim():'';d.reminder=rm;toast('Reminder '+(i+1)+' saved!');render();}
+function clearOneReminder(i){const d=V();d._reminderUndo=[...(Array.isArray(d.reminder)?d.reminder:[])];const rm=Array.isArray(d.reminder)?[...d.reminder]:['','','','',''];while(rm.length<5)rm.push('');rm[i]='';d.reminder=rm;toast('Reminder '+(i+1)+' cleared.');render();}
+function deleteReminder(){const d=V();d._reminderUndo=[...(Array.isArray(d.reminder)?d.reminder:[])];d.reminder=['','','','',''];toast('All reminders cleared.');render();}
+function undoReminder(){const d=V();if(d._reminderUndo){d.reminder=d._reminderUndo;d._reminderUndo=null;toast('Reminders restored.');render();}else{toast('Nothing to undo.','error');}}
 
 /* ═══ IMPORT/EXPORT ═══ */
-function rAdmIO(){return `<div class="g3 mb16">${[{t:'cases',ic:'📋',l:'WJ Cases'},{t:'tips',ic:'💡',l:'QA Tips'},{t:'quiz',ic:'🧠',l:'Quiz Questions'}].map(({t,ic,l})=>`<div class="card text-center" style="padding:24px"><div style="font-size:32px;margin-bottom:10px">${ic}</div><h3 style="font-size:15px;font-weight:800;margin-bottom:4px">${l}</h3><p style="font-size:12px;color:#6B7280;margin-bottom:14px">Import or export</p>
-<button class="btn-primary" style="width:100%;margin-bottom:8px" onclick="V()._importTarget='${t}';$('file-import').click()">⬆ Import .xlsx</button><button class="btn-outline" style="width:100%" onclick="exportData('${t}')">⬇ Export .xlsx</button></div>`).join('')}</div>
-<div class="card" style="padding:22px"><h4 style="font-size:14px;font-weight:800;margin-bottom:12px">📄 Column Guides</h4>${[{l:'Cases',c:'id, week, returnReason, agent, rcaL1, rcaL2, rcaL3, findings, coaching, painPoint, keyLesson'},{l:'Tips',c:'title, tip, category, week, date'},{l:'Quiz',c:'question, option1, option2, option3, option4, correctAnswer, week'}].map(g=>`<div class="mb12"><div style="font-size:13px;font-weight:700;color:#EE4D2D;margin-bottom:4px">${g.l}</div><div style="background:#F3F4F6;border-radius:8px;padding:10px 14px;font-size:12px;font-family:monospace;line-height:1.6">${g.c}</div></div>`).join('')}</div>`;}
+function rAdmChangelog(){
+  const versions=[
+    {v:'v3',label:'Version 3',date:'May 2026',bundle:'B5',current:true,updates:[
+      {cat:'🐛 Bug Fix',text:'Fixed critical syntax errors (missing function declarations, unclosed braces) that caused blank dashboard on load'},
+      {cat:'🔄 Sync',text:'CORS proxy system with 3 automatic fallbacks (corsproxy.io → allorigins.win → cors-anywhere) for Shopee org restrictions'},
+      {cat:'🔢 UI',text:'Sync count badge on Sync from Sheets button showing how many times data has been refreshed this session'},
+      {cat:'📊 Admin',text:'Push to Sheets button moved from sidebar into Admin → Import/Export tab'},
+      {cat:'✅ Feature',text:'Acknowledge button on WJ Cases and QA Tips — per-user, synced to Firebase'},
+      {cat:'👥 Admin',text:'Acknowledgement log visible in Admin → User Stats showing who acknowledged what and when'},
+      {cat:'📋 Admin',text:'Version Updates tab added to Admin panel showing full changelog'},
+    ]},
+    {v:'v2',label:'Version 2',date:'May 2026',bundle:'B4',current:false,updates:[
+      {cat:'🔄 Sync',text:'Google Sheets two-way sync — Dashboard writes back to Sheets automatically 3s after any change'},
+      {cat:'📊 Admin',text:'User Statistics tab under Admin — total users, BPO comparison, per-user breakdown (attempts, avg, best, worst, views taken)'},
+      {cat:'🖼️ Feature',text:'Google Drive image & video support in Cases — paste shareable Drive link in Image URL / Video URL column'},
+      {cat:'⬆️ Sync',text:'Push to Sheets button in sidebar for manual write-back'},
+      {cat:'🗑️ Admin',text:'Removed Coaching field from WJ Cases (detail view, add form, edit form)'},
+      {cat:'📢 Feature',text:'5 independent reminders — each shows/hides individually on dashboard banner'},
+      {cat:'🔢 Sync',text:'Sheets auto-refresh every 5 minutes (was 30)'},
+    ]},
+    {v:'v1',label:'Version 1',date:'May 2026',bundle:'B3',current:false,updates:[
+      {cat:'🔄 Sync',text:'Firebase Realtime Database integration — cases, tips, quiz, kudos, scores, reminders all shared across users in real time'},
+      {cat:'👤 Feature',text:'Username + BPO (Vads / ePerformax) prompt before quiz — name shown in sidebar'},
+      {cat:'🏆 Feature',text:'Quiz score leaderboard with dual podium — separate Top 3 for Vads and ePerformax'},
+      {cat:'📊 Feature',text:'Quiz scores synced to Firebase (visible to all, not just local browser)'},
+      {cat:'🟢 UI',text:'Firebase connection status indicator in sidebar (Synced / Connecting / Not connected / Local only)'},
+      {cat:'🕐 UI',text:'Last synced timestamp shown below Firebase status button'},
+      {cat:'📢 Feature',text:'3 reminder slots (later expanded to 5) with individual Save / Clear / Undo per slot'},
+      {cat:'📊 Google Sheets',text:'Google Sheets sync integration — dashboard fetches from Sheets on load and every 5 minutes'},
+      {cat:'🗑️ UI',text:'Removed Agent field from WJ Cases'},
+      {cat:'📊 Admin',text:'Refresh timestamp shown in Admin panel'},
+    ]},
+    {v:'legacy',label:'Legacy (v1–v15)',date:'Apr–May 2026',bundle:'B1–B3',current:false,updates:[
+      {cat:'🏗️ Foundation',text:'Initial WJ Dashboard built with DMS, L2RR, P1 views'},
+      {cat:'📋 Feature',text:'WJ Cases with RCA L1/L2/L3 breakdown, findings, pain point, key lesson'},
+      {cat:'💡 Feature',text:'QA Tips with category filter, week filter, search, expand/collapse'},
+      {cat:'🧠 Feature',text:'Knowledge Quiz with auto-generated questions from cases + custom questions'},
+      {cat:'🏆 Feature',text:'Kudos board with weekly recognition'},
+      {cat:'📊 Feature',text:'Dashboard analytics — case counts, RCA breakdown charts, recent cases'},
+      {cat:'⚙️ Feature',text:'Admin panel — add/edit/delete cases, tips, quiz questions, kudos'},
+      {cat:'📁 Feature',text:'Import/Export via Excel (.xlsx) files'},
+      {cat:'📢 Feature',text:'Weekly reminder banner on dashboard'},
+      {cat:'📝 Feature',text:'Quiz score history with expandable answer review'},
+    ]},
+  ];
 
+  const catColor=cat=>{
+    if(cat.startsWith('🐛')) return ['#FEF2F2','#DC2626'];
+    if(cat.startsWith('🔄')||cat.startsWith('⬆️')) return ['#EFF6FF','#2563EB'];
+    if(cat.startsWith('🏆')||cat.startsWith('✅')) return ['#ECFDF5','#059669'];
+    if(cat.startsWith('👤')||cat.startsWith('👥')) return ['#FFF7ED','#D97706'];
+    if(cat.startsWith('📊')||cat.startsWith('📋')) return ['#F5F3FF','#7C3AED'];
+    if(cat.startsWith('🗑️')) return ['#FEF2F2','#DC2626'];
+    return ['#F3F4F6','#374151'];
+  };
+
+  return `<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div><h2 style="font-size:20px;font-weight:900;margin-bottom:4px">📋 Version Updates</h2>
+      <p style="font-size:13px;color:#6B7280">Full history of WJ Dashboard changes — bundled every 5 internal versions.</p></div>
+      <div style="text-align:right"><div style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Current</div>
+      <div style="font-size:22px;font-weight:900;color:#EE4D2D">Version 3</div></div>
+    </div>
+    ${versions.map(ver=>`
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;${ver.current?'border:2px solid #EE4D2D':''}">
+      <div style="padding:16px 20px;background:${ver.current?'linear-gradient(135deg,#EE4D2D,#FF6B47)':'#F9FAFB'};display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:22px;font-weight:900;color:${ver.current?'#fff':'#1A1A1A'}">${ver.label}</div>
+          ${ver.current?'<span style="background:rgba(255,255,255,.25);color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px">CURRENT</span>':''}
+        </div>
+        <div style="font-size:12px;font-weight:600;color:${ver.current?'rgba(255,255,255,.8)':'#6B7280'}">${ver.date}</div>
+      </div>
+      <div style="padding:16px 20px">
+        ${ver.updates.map(u=>{const [bg,col]=catColor(u.cat);return `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+          <span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${bg};color:${col};white-space:nowrap;flex-shrink:0;margin-top:1px">${u.cat}</span>
+          <span style="font-size:13px;line-height:1.6;color:#374151">${u.text}</span>
+        </div>`;}).join('')}
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function rAdmIO(){
+  return `<div>
+  <div class="card" style="padding:20px;margin-bottom:16px">
+    <div style="font-size:15px;font-weight:900;margin-bottom:14px">📁 Excel Import / Export</div>
+    <div class="g3">
+      ${[{t:'cases',ic:'📋',l:'WJ Cases'},{t:'tips',ic:'💡',l:'QA Tips'},{t:'quiz',ic:'🧠',l:'Quiz Questions'}].map(({t,ic,l})=>`<div class="card text-center" style="padding:20px;margin-bottom:0"><div style="font-size:28px;margin-bottom:8px">${ic}</div><h3 style="font-size:14px;font-weight:800;margin-bottom:4px">${l}</h3><p style="font-size:11px;color:#6B7280;margin-bottom:12px">Import or export</p>
+      <button class="btn-primary" style="width:100%;margin-bottom:8px;font-size:12px;padding:8px" onclick="V()._importTarget='${t}';$('file-import').click()">⬆ Import .xlsx</button>
+      <button class="btn-outline" style="width:100%;font-size:12px;padding:8px" onclick="exportData('${t}')">⬇ Export .xlsx</button></div>`).join('')}
+    </div>
+  </div>
+  <div class="card" style="padding:20px">
+    <h4 style="font-size:14px;font-weight:800;margin-bottom:12px">📄 Column Guides</h4>
+    ${[{l:'Cases',c:'id, week, returnReason, rcaL1, rcaL2, rcaL3, findings, painPoint, keyLesson, imageUrl, videoUrl'},{l:'Tips',c:'title, tip, category, week, date'},{l:'Quiz',c:'question, option1, option2, option3, option4, correctAnswer, week'}].map(g=>`<div class="mb12"><div style="font-size:13px;font-weight:700;color:#EE4D2D;margin-bottom:4px">${g.l}</div><div style="background:#F3F4F6;border-radius:8px;padding:10px 14px;font-size:12px;font-family:monospace;line-height:1.6">${g.c}</div></div>`).join('')}
+  </div></div>`;
+}
 $('file-import').addEventListener('change',function(e){
   const f=e.target.files[0];if(!f)return;const d=V();const target=d._importTarget;
   const r=new FileReader();r.onload=function(ev){try{
@@ -842,18 +1051,8 @@ _fileCallbacks['nc-img']=function(d){V()._ncImgData=d;};
 _fileCallbacks['nc-vid']=function(d){V()._ncVidData=d;};
 _fileCallbacks['nt-img']=function(d){V()._ntImgData=d;};
 _fileCallbacks['nt-vid']=function(d){V()._ntVidData=d;};
-/* Show Sheets sync button if configured */
-if(sheetsConfigured()){
-  const row = document.getElementById('sheets-sync-row');
-  if(row) row.style.display='block';
-}
 /* Init Firebase — loads all shared data, then renders */
 initFirebase();
-/* Start Sheets auto-sync timer (runs independently of Firebase) */
-if(sheetsConfigured()){
-  syncFromSheets(true);   // initial fetch on load
-  startSheetsTimer();      // then every 30 min
-}
 </script>
 </body>
 </html>
