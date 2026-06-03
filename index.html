@@ -150,6 +150,7 @@ const S = {
   dms: mkView([],[],[],[]),
   l2rr: mkView([],[],[],[]),
   p1: mkView([],[],[],[]),
+  _visits: [],  // traffic log — array of {ts, day, hour, dow}
 };
 
 /* ═══ HELPERS ═══ */
@@ -356,6 +357,8 @@ function onFirebaseLoaded(){
     _fbReady = true;
     fbStatus('warn');
     loadAllFromFirebase();
+    logVisit();
+    subscribeVisits();
   }catch(e){
     console.error('Firebase init error:', e);
     fbStatus('err');
@@ -422,6 +425,34 @@ function saveToFirebase(viewKey, field){
   const val = field === 'reminder' ? d.reminder : d[field];
   _fbDB.ref(fbPath(viewKey, field)).set(val).catch(e => console.warn('Firebase write error:', e));
 }
+
+/* ── TRAFFIC / VISIT TRACKING ────────────────────────────────────
+   Logs one visit per browser session to wjdashboard/_visits
+   Uses sessionStorage to avoid double-counting tab switches.     */
+function logVisit(){
+  if(!_fbReady) return;
+  if(sessionStorage.getItem('_wjVisitLogged')) return;
+  const now = new Date();
+  const record = {
+    ts:  now.toISOString(),
+    day: now.toISOString().slice(0,10),   // "2026-06-03"
+    hour: now.getHours(),                  // 0-23
+    dow:  now.getDay(),                    // 0=Sun … 6=Sat
+  };
+  _fbDB.ref('wjdashboard/_visits').push(record)
+    .then(()=>{ sessionStorage.setItem('_wjVisitLogged','1'); })
+    .catch(e=>console.warn('Visit log error:',e));
+}
+
+function subscribeVisits(){
+  if(!_fbReady) return;
+  _fbDB.ref('wjdashboard/_visits').on('value', snap=>{
+    const val = snap.val();
+    S._visits = val ? Object.values(val) : [];
+    render();
+  }, e => console.warn('Visit subscribe error:',e));
+}
+// ─────────────────────────────────────────────────────────────────
 
 /* Auto-save on every render — only changed view's data */
 var _saveDebounce = {};
@@ -848,8 +879,8 @@ ${d.ok?`<div style="font-size:13px"><span style="font-weight:700;color:#059669">
 
 /* ═══ ADMIN ═══ */
 function rAdmin(){const d=V();
-  const tabs=[{k:'changelog',l:'📋 Version Updates'},{k:'userstats',l:'👥 User Stats'}];
-  let ct='';switch(d.adminSub||'changelog'){case 'userstats':ct=rAdmUserStats();break;default:ct=rAdmChangelog();}
+  const tabs=[{k:'changelog',l:'📋 Version Updates'},{k:'userstats',l:'👥 User Stats'},{k:'traffic',l:'📈 Traffic'}];
+  let ct='';switch(d.adminSub||'changelog'){case 'userstats':ct=rAdmUserStats();break;case 'traffic':ct=rAdmTraffic();break;default:ct=rAdmChangelog();}
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:2px">⚙️ Admin — ${viewNames[S.view]}</h1><p style="font-size:13px;color:#6B7280;margin-bottom:20px">Statistics and version history. All data is managed via Google Sheets.</p>
   <div class="flex-w mb16">${tabs.map(t=>`<button style="padding:10px 20px;border-radius:10px;border:1.5px solid ${d.adminSub===t.k?'#EE4D2D':'#E5E7EB'};background:${d.adminSub===t.k?'#FFF5F2':'#fff'};color:${d.adminSub===t.k?'#EE4D2D':'#6B7280'};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="V().adminSub='${t.k}';render()">${t.l}${t.c!==undefined?' <span style="opacity:.7">('+t.c+')</span>':''}</button>`).join('')}</div>${ct}</div>`;}
 
@@ -1016,6 +1047,132 @@ function hasAcked(type, id){
   return (d.acks||[]).some(a=>a.type===type&&a.id===String(id)&&a.username===_currentUsername);
 }
 /* ═══ IMPORT/EXPORT ═══ */
+/* ═══ TRAFFIC TAB ═══ */
+function rAdmTraffic(){
+  const visits = S._visits || [];
+
+  /* ── date helpers ─────────────────────────────────────── */
+  const todayStr  = new Date().toISOString().slice(0,10);
+  const msPerDay  = 86400000;
+  const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  // Build last-14-days bucket list
+  const days14 = [];
+  for(let i=13;i>=0;i--){
+    const d = new Date(Date.now() - i*msPerDay);
+    days14.push(d.toISOString().slice(0,10));
+  }
+
+  // Count per day
+  const byDay = {};
+  visits.forEach(v=>{ byDay[v.day] = (byDay[v.day]||0)+1; });
+
+  // Count per hour (all-time)
+  const byHour = Array(24).fill(0);
+  visits.forEach(v=>{ if(v.hour!=null) byHour[v.hour]++; });
+
+  // Count per day-of-week (all-time)
+  const byDow = Array(7).fill(0);
+  visits.forEach(v=>{ if(v.dow!=null) byDow[v.dow]++; });
+
+  /* ── summary stats ────────────────────────────────────── */
+  const total     = visits.length;
+  const today     = byDay[todayStr] || 0;
+  const week7     = days14.slice(7).reduce((s,d)=>s+(byDay[d]||0),0);
+  const maxDay    = days14.reduce((m,d)=>Math.max(m,byDay[d]||0),0);
+  const peakDay   = days14.find(d=>(byDay[d]||0)===maxDay);
+  const peakLabel = peakDay ? new Date(peakDay+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+
+  /* ── bar chart — 14 days ──────────────────────────────── */
+  function barChart(){
+    if(!total) return `<div style="text-align:center;padding:40px;color:#9CA3AF;font-size:13px">No visit data yet — visits are logged automatically each session.</div>`;
+    const bars = days14.map(d=>{
+      const cnt = byDay[d]||0;
+      const pct = maxDay>0 ? Math.round((cnt/maxDay)*100) : 0;
+      const isToday = d===todayStr;
+      const label = new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const barColor = isToday ? '#EE4D2D' : '#2563EB';
+      const barBg    = isToday ? '#FFF5F2' : '#EFF6FF';
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:${cnt?barColor:'#D1D5DB'}">${cnt||''}</div>
+        <div style="width:100%;display:flex;align-items:flex-end;height:80px">
+          <div style="width:100%;height:${Math.max(pct,cnt?4:0)}%;background:${cnt?barColor:barBg};border-radius:4px 4px 0 0;transition:height .3s;min-height:${cnt?4:0}px"></div>
+        </div>
+        <div style="font-size:9.5px;color:${isToday?'#EE4D2D':'#6B7280'};font-weight:${isToday?800:600};text-align:center;line-height:1.2;white-space:nowrap">${label}${isToday?'<br>TODAY':''}</div>
+      </div>`;
+    }).join('');
+    return `<div style="display:flex;align-items:flex-end;gap:6px;padding:8px 0 0 0;height:130px">${bars}</div>`;
+  }
+
+  /* ── hour heatmap (0-23) ─────────────────────────────── */
+  function hourChart(){
+    const maxH = Math.max(...byHour,1);
+    const cells = byHour.map((cnt,h)=>{
+      const pct = Math.round((cnt/maxH)*100);
+      const bg = cnt===0?'#F3F4F6':pct>75?'#1D4ED8':pct>50?'#2563EB':pct>25?'#93C5FD':'#DBEAFE';
+      const tc = cnt===0?'#D1D5DB':pct>50?'#fff':'#1E40AF';
+      const label = (h%3===0)?String(h).padStart(2,'0')+':00':'';
+      return `<div title="${h}:00 — ${cnt} visits" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px">
+        <div style="width:100%;height:28px;border-radius:4px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${tc}">${cnt||''}</div>
+        <div style="font-size:8px;color:#9CA3AF;min-height:10px">${label}</div>
+      </div>`;
+    }).join('');
+    return `<div style="display:flex;gap:3px;align-items:flex-start">${cells}</div>`;
+  }
+
+  /* ── day-of-week bars ────────────────────────────────── */
+  function dowChart(){
+    const maxDow = Math.max(...byDow,1);
+    const bars = byDow.map((cnt,i)=>{
+      const pct = Math.round((cnt/maxDow)*100);
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+        <div style="font-size:11px;font-weight:800;color:${cnt?'#059669':'#D1D5DB'}">${cnt||''}</div>
+        <div style="width:100%;height:48px;display:flex;align-items:flex-end">
+          <div style="width:100%;height:${Math.max(pct,cnt?6:0)}%;background:${cnt?'#059669':'#F3F4F6'};border-radius:4px 4px 0 0;min-height:${cnt?4:0}px"></div>
+        </div>
+        <div style="font-size:11px;color:#6B7280;font-weight:700">${dayLabels[i]}</div>
+      </div>`;
+    }).join('');
+    return `<div style="display:flex;gap:8px;align-items:flex-end;height:80px">${bars}</div>`;
+  }
+
+  return `<div>
+  <!-- Summary strip -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Total Visits</div><div style="font-size:28px;font-weight:900;color:#2563EB">${total}</div></div>
+    <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Today</div><div style="font-size:28px;font-weight:900;color:#EE4D2D">${today}</div></div>
+    <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Last 7 Days</div><div style="font-size:28px;font-weight:900;color:#059669">${week7}</div></div>
+    <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Peak Day</div><div style="font-size:22px;font-weight:900;color:#D97706">${peakLabel}</div><div style="font-size:11px;font-weight:700;color:#D97706">${maxDay} visits</div></div>
+  </div>
+
+  <!-- 14-day bar chart -->
+  <div class="card" style="padding:20px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:15px;font-weight:800;margin:0">📅 Last 14 Days</h3>
+      <span style="font-size:11px;color:#6B7280;font-weight:600">🔴 = today</span>
+    </div>
+    ${barChart()}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0">
+    <!-- Hour-of-day heatmap -->
+    <div class="card" style="padding:20px">
+      <h3 style="font-size:15px;font-weight:800;margin-bottom:14px">🕐 Visits by Hour (all-time)</h3>
+      ${hourChart()}
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:#6B7280">Darker blue = more visits. Hover cells for detail.</span>
+      </div>
+    </div>
+
+    <!-- Day-of-week -->
+    <div class="card" style="padding:20px">
+      <h3 style="font-size:15px;font-weight:800;margin-bottom:14px">📆 Visits by Day of Week (all-time)</h3>
+      ${dowChart()}
+    </div>
+  </div>
+  </div>`;
+}
+
 function rAdmChangelog(){
   const versions=[
     {v:'v5',label:'Version 5',date:'Jun 2026',bundle:'B6',current:true,updates:[
