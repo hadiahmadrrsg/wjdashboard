@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v4</title>
+<title>WJ Dashboard v5</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -139,6 +139,8 @@ function mkView(sampleCases,sampleTips,sampleQs,sampleKudos){
     reminder:['','','','',''],
     _reminderUndo:null,
     acks:[],  // [{type:'case'|'tip', id, username, bpo, date}]
+    mdCases:[],  // L2RR-only: separate Markdown cases dataset
+    mdFWeek:'All',mdFTopic:'All',mdFKeyword:'',
   };
 }
 
@@ -163,7 +165,7 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v4';
+const VER='v5';
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -368,7 +370,7 @@ function fbPath(view, field){
 /* Load all views from Firebase, then subscribe to live updates */
 function loadAllFromFirebase(){
   const views = ['dms','l2rr','p1'];
-  const fields = ['cases','tips','customQs','kudos','reminder','scores','acks'];
+  const fields = ['cases','tips','customQs','kudos','reminder','scores','acks','mdCases'];
   let pending = views.length * fields.length + 1; // +1 for _lastSheetSync
 
   function done(){ pending--; if(pending===0){ render(); fbStatus('ok'); subscribeAll(); } }
@@ -397,7 +399,7 @@ function loadAllFromFirebase(){
 /* Live listeners — update state & re-render when another user changes data */
 function subscribeAll(){
   const views = ['dms','l2rr','p1'];
-  const fields = ['cases','tips','customQs','kudos','reminder','scores','acks'];
+  const fields = ['cases','tips','customQs','kudos','reminder','scores','acks','mdCases'];
   views.forEach(v => {
     fields.forEach(f => {
       const key = v+':'+f;
@@ -428,7 +430,7 @@ function autoSave(viewKey){
   // Debounce 600ms to avoid writes on every keystroke
   clearTimeout(_saveDebounce[viewKey]);
   _saveDebounce[viewKey] = setTimeout(() => {
-    ['cases','tips','customQs','kudos','reminder','scores','acks'].forEach(f => saveToFirebase(viewKey, f));
+    ['cases','tips','customQs','kudos','reminder','scores','acks','mdCases'].forEach(f => saveToFirebase(viewKey, f));
   }, 600);
 }
 const viewColors={dms:'#EE4D2D',l2rr:'#2563EB',p1:'#7C3AED'};
@@ -471,6 +473,7 @@ function renderNav(){
   const tabs=[
     {k:'dashboard',l:'Home',ic:'🏠',c:undefined},
     {k:'cases',l:'WJ Cases',ic:'📋',c:d.cases.length},
+    ...(S.view==='l2rr'?[{k:'markdown',l:'Markdown',ic:'📄',c:undefined}]:[]),
     {k:'tips',l:'QA Tips',ic:'💡',c:d.tips.length},
     {k:'quiz',l:'Quiz',ic:'🧠',c:undefined},
     {k:'scores',l:'Quiz Scores',ic:'📝',c:undefined},
@@ -488,6 +491,7 @@ function render(){renderNav();const m=$('main');const st=m.scrollTop;const d=V()
   switch(S.tab){
     case 'dashboard':m.innerHTML=rDash();break;
     case 'cases':m.innerHTML=d.sel?rCaseDetail():rCases();break;
+    case 'markdown':m.innerHTML=rMarkdown();break;
     case 'tips':m.innerHTML=rTips();break;
     case 'quiz':m.innerHTML=rQuiz();break;
     case 'scores':m.innerHTML=rScores();break;
@@ -512,9 +516,10 @@ function rDash(){const d=V();const vn=viewNames[S.view];const vc=viewColors[S.vi
     <div style="font-size:28px;flex-shrink:0">🚨</div>
     <div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.85;margin-bottom:6px">Weekly Reminders — ${esc(lat)}</div>${(Array.isArray(d.reminder)?d.reminder:[]).filter(r=>r&&r.trim()).map((r,i)=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px"><span style="flex-shrink:0;background:rgba(255,255,255,.3);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">${i+1}</span><span>${esc(r)}</span></div>`).join('')||'<span style="opacity:.7;font-size:13px">No reminders set.</span>'}</div>
   </div>
-  <div class="stat-grid">
+  <div class="stat-grid" style="grid-template-columns:repeat(${S.view==='l2rr'?5:4},1fr)">
     <div class="card stat-card"><div class="stat-label">Weeks <span style="font-size:24px">📅</span></div><div class="stat-val" style="color:#2563EB">${aw.length}</div></div>
     <div class="card stat-card"><div class="stat-label">Total WJ <span style="font-size:24px">📋</span></div><div class="stat-val" style="color:${vc}">${d.cases.length}</div></div>
+    ${S.view==='l2rr'?'<div class="card stat-card"><div class="stat-label">Total MD <span style="font-size:24px">📄</span></div><div class="stat-val" style="color:#2563EB">'+d.mdCases.length+'</div></div>':''}
     <div class="card stat-card"><div class="stat-label">Acknowledged <span style="font-size:24px">✅</span></div><div class="stat-val" style="color:#059669">${(d.acks||[]).length}<span style="font-size:14px;color:#6B7280;font-weight:600"> / ${d.cases.length+d.tips.length}</span></div></div>
     <div class="card stat-card"><div class="stat-label">Quiz Avg <span style="font-size:24px">🧠</span></div><div class="stat-val" style="color:#D97706">${qAvg}</div></div>
   </div>
@@ -606,6 +611,99 @@ function rCaseDetail(){const c=V().sel;if(!c)return '';
   ${c.videoUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#EE4D2D;text-transform:uppercase;margin-bottom:8px">🎥 Evidence Video</div>${isDriveUrl(c.videoUrl)?`<iframe src="${esc(driveVideo(c.videoUrl))}" style="width:100%;aspect-ratio:16/9;border-radius:12px;border:none" allowfullscreen></iframe>`:`<video src="${esc(c.videoUrl)}" controls style="max-width:100%;border-radius:12px" onerror="this.style.display='none'"></video>`}</div>`:''}
   <div style="margin-top:8px;padding-top:20px;border-top:1px solid #F3F4F6">${hasAcked('case',caseKey)?`<div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:12px;background:#ECFDF5;border:1.5px solid #059669"><span style="font-size:16px">✅</span><span style="font-size:13px;font-weight:700;color:#059669">You acknowledged this case</span></div>`:`<button class="btn-primary" style="background:linear-gradient(135deg,#059669,#10B981)" onclick="acknowledgeCurrentCase()">✅ I've Read & Understood This</button>`}</div>
   </div></div></div>`;}
+
+/* ═══ MARKDOWN (L2RR only) ═══ */
+function buildMarkdownText(cases){
+  if(!cases.length) return '_(No cases match the current filters.)_';
+  let md = '# L2RR — Markdown Cases\n\n';
+  groupByWeek(cases).forEach(([w,wc])=>{
+    md += '---\n\n## '+w+'\n\n';
+    wc.forEach((c,i)=>{
+      md += '### Case '+(i+1)+': '+( c.returnReason||'—')+'\n\n';
+      const rca=[c.rcaL1,c.rcaL2,c.rcaL3].filter(Boolean).join(' → ');
+      if(rca) md += '**RCA:** '+rca+'\n\n';
+      if(c.findings)   md += '**📝 Findings:**  \n'+c.findings+'\n\n';
+      if(c.painPoint)  md += '**🎯 Pain Point:**  \n'+c.painPoint+'\n\n';
+      if(c.keyLesson)  md += '**💡 Key Lesson:**  \n'+c.keyLesson+'\n\n';
+    });
+  });
+  return md.trim();
+}
+
+function rMarkdown(){
+  const d=V();
+  const mc=d.mdCases||[];
+  const ws=['All',...uv(mc,'week')];
+  const ts=['All',...uv(mc,'returnReason')];
+  const f=mc.filter(c=>
+    (d.mdFWeek==='All'||c.week===d.mdFWeek)&&
+    (d.mdFTopic==='All'||c.returnReason===d.mdFTopic)&&
+    (!d.mdFKeyword||[c.findings,c.painPoint,c.keyLesson,c.returnReason,c.rcaL3].join(' ').toLowerCase().includes(d.mdFKeyword.toLowerCase()))
+  );
+  const mdText = buildMarkdownText(f);
+
+  const weekBlocks = groupByWeek(f).map(([w,wc])=>{
+    const blockText = '## '+w+'\n\n'+wc.map((c,i)=>{
+      let t = '### Case '+(i+1)+': '+(c.returnReason||'—')+'\n\n';
+      const rca=[c.rcaL1,c.rcaL2,c.rcaL3].filter(Boolean).join(' → ');
+      if(rca) t += '**RCA:** '+rca+'\n\n';
+      if(c.findings)  t += '**📝 Findings:**  \n'+c.findings+'\n\n';
+      if(c.painPoint) t += '**🎯 Pain Point:**  \n'+c.painPoint+'\n\n';
+      if(c.keyLesson) t += '**💡 Key Lesson:**  \n'+c.keyLesson+'\n\n';
+      return t;
+    }).join('---\n\n');
+    return `<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>
+    <div class="card" style="padding:20px 24px;background:#F8FAFC;margin-bottom:4px">
+      <pre id="md-block-${esc(w)}" style="font-family:'Courier New',monospace;font-size:12.5px;line-height:1.85;white-space:pre-wrap;word-break:break-word;margin:0;color:#1A1A1A">${esc(blockText)}</pre>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end">
+        <button class="btn-sm btn-edit" onclick="copyMdBlock('md-block-${esc(w)}')">📋 Copy Week</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="pg">
+  <textarea id="md-full-text" style="position:fixed;left:-9999px;top:-9999px;opacity:0" aria-hidden="true">${esc(mdText)}</textarea>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+    <div>
+      <h1 style="font-size:24px;font-weight:900;margin-bottom:4px">📄 Markdown</h1>
+      <p style="font-size:14px;color:#6B7280">L2RR cases as copyable Markdown — paste directly into Notion, Confluence, or any .md file.</p>
+    </div>
+    <button class="btn-primary" style="padding:10px 22px;display:flex;align-items:center;gap:8px;flex-shrink:0" onclick="copyMdAll()">📋 Copy All Markdown</button>
+  </div>
+  <div class="card" style="padding:14px 20px;margin-bottom:12px">
+    <div class="filter-row">
+      <span class="filter-label">Week:</span>${dd('mdfw',d.mdFWeek,ws,'All Weeks',"V().mdFWeek=this.value;render()")}
+      <span class="filter-label">Topic:</span>${dd('mdft',d.mdFTopic,ts,'All Topics',"V().mdFTopic=this.value;render()")}
+      <span class="filter-label">Search:</span><input class="inp" style="flex:1;min-width:180px" placeholder="Search..." value="${esc(d.mdFKeyword)}" oninput="V().mdFKeyword=this.value;render()">
+    </div>
+  </div>
+  <div class="notif" style="background:#EFF6FF;border:1px solid rgba(37,99,235,.2)"><span style="font-size:18px">📄</span><span style="font-size:13px;color:#2563EB;font-weight:600">${f.length} case${f.length!==1?'s':''} shown. Use <b>Copy Week</b> for a single week or <b>Copy All Markdown</b> for everything.</span></div>
+  ${!f.length?'<div class="text-center" style="padding:40px;color:#6B7280">No cases match.</div>':''}
+  ${weekBlocks}
+  </div>`;
+}
+
+function copyMdAll(){
+  const ta=document.getElementById('md-full-text');
+  if(!ta) return;
+  _copyText(ta.value||ta.textContent);
+}
+function copyMdBlock(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  _copyText(el.textContent||el.innerText);
+}
+function _copyText(text){
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(text).then(()=>toast('✅ Markdown copied!')).catch(()=>_copyFallback(text));
+  } else { _copyFallback(text); }
+}
+function _copyFallback(text){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');toast('✅ Markdown copied!');}catch(e){toast('Copy failed — select text manually','error');}
+  document.body.removeChild(ta);
+}
 
 /* ═══ TIPS ═══ */
 function rTips(){const d=V();const cs=['All',...uv(d.tips,'category')];const tw=['All',...uv(d.tips,'week')];
@@ -763,9 +861,21 @@ function rAdmin(){const d=V();
 
 
 function rAdmUserStats(){
+  const MASTERFILE_LINK = 'https://docs.google.com/spreadsheets/d/1MZDK3bt9prt65h5-dB-Qu-FJWjbUOS1bbf8TNjyiOm4/edit?gid=156487998#gid=156487998';
+  const masterfileCard = `<div class="card" style="padding:18px 22px;margin-bottom:16px;border:1.5px solid #E5E7EB;display:flex;align-items:center;gap:16px">
+    <div style="width:44px;height:44px;border-radius:12px;background:#ECFDF5;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📊</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:14px;font-weight:800;margin-bottom:2px">WJ Dashboard Masterfile</div>
+      <div style="font-size:12px;color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Google Sheets — all cases, tips, quiz questions, reminders</div>
+    </div>
+    <a href="${MASTERFILE_LINK}" target="_blank" rel="noopener noreferrer"
+       style="padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,#059669,#10B981);color:#fff;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:6px">
+      🔗 Open Masterfile
+    </a>
+  </div>`;
   /* Collect all scores across all views */
   const allScores = ['dms','l2rr','p1'].flatMap(v => (S[v].scores||[]).map(s=>({...s,view:v.toUpperCase()})));
-  if(!allScores.length) return `<div class="card" style="padding:40px;text-align:center"><div style="font-size:48px;margin-bottom:12px">👥</div><h3 style="font-weight:800;margin-bottom:8px">No quiz data yet</h3><p style="color:#6B7280;font-size:13px">User stats will appear here once agents start taking quizzes.</p></div>`;
+  if(!allScores.length) return masterfileCard + `<div class="card" style="padding:40px;text-align:center"><div style="font-size:48px;margin-bottom:12px">👥</div><h3 style="font-weight:800;margin-bottom:8px">No quiz data yet</h3><p style="color:#6B7280;font-size:13px">User stats will appear here once agents start taking quizzes.</p></div>`;
 
   /* Per-user stats */
   const byUser={};
@@ -800,7 +910,7 @@ function rAdmUserStats(){
   const scoreColor=p=>p>=80?'#059669':p>=50?'#D97706':'#DC2626';
   const scoreBg=p=>p>=80?'#ECFDF5':p>=50?'#FFFBEB':'#FEF2F2';
 
-  return `<div>
+  return masterfileCard + `<div>
   <!-- Summary strip -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
     <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Total Users</div><div style="font-size:28px;font-weight:900;color:#2563EB">${users.length}</div></div>
@@ -908,7 +1018,13 @@ function hasAcked(type, id){
 /* ═══ IMPORT/EXPORT ═══ */
 function rAdmChangelog(){
   const versions=[
-    {v:'v4',label:'Version 4',date:'May 2026',bundle:'B5',current:true,updates:[
+    {v:'v5',label:'Version 5',date:'Jun 2026',bundle:'B6',current:true,updates:[
+      {cat:'📄 Feature',text:'Markdown sub-tab added under L2RR — separate dataset (MD Cases) with own filters, copyable per-week and full-document markdown output'},
+      {cat:'📊 Dashboard',text:'Total MD stat card added to L2RR Home — shows count of Markdown cases beside Total WJ'},
+      {cat:'🔗 Admin',text:'Masterfile link added to Admin → User Stats — direct access to WJ Dashboard Google Sheets masterfile'},
+      {cat:'🔢 Data',text:'mdCases added as independent Firebase field — separate from WJ Cases, sourced from MD_Cases_L2RR sheet in masterfile'},
+    ]},
+    {v:'v4',label:'Version 4',date:'May 2026',bundle:'B5',current:false,updates:[
       {cat:'🏆 Feature',text:'View-specific BPO podiums — DMS shows Vads + ePerformax, L2RR shows ePerformax only, P1 shows ePerformax + Asia Recruit'},
       {cat:'🗑️ Admin',text:'Removed all manual data entry from Admin — Cases, Tips, Quiz, Kudos, Reminder tabs removed. All data managed via Google Sheets'},
       {cat:'🗑️ UI',text:'Removed Kudos tab from navigation and Latest Cases section from Home'},
@@ -973,7 +1089,7 @@ function rAdmChangelog(){
       <div><h2 style="font-size:20px;font-weight:900;margin-bottom:4px">📋 Version Updates</h2>
       <p style="font-size:13px;color:#6B7280">Full history of WJ Dashboard changes — bundled every 5 internal versions.</p></div>
       <div style="text-align:right"><div style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Current</div>
-      <div style="font-size:22px;font-weight:900;color:#EE4D2D">Version 4</div></div>
+      <div style="font-size:22px;font-weight:900;color:#EE4D2D">Version 5</div></div>
     </div>
     ${versions.map(ver=>`
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;${ver.current?'border:2px solid #EE4D2D':''}">
