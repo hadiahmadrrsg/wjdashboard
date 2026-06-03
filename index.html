@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v5</title>
+<title>WJ Dashboard v6</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -141,6 +141,7 @@ function mkView(sampleCases,sampleTips,sampleQs,sampleKudos){
     acks:[],  // [{type:'case'|'tip', id, username, bpo, date}]
     mdCases:[],  // L2RR-only: separate Markdown cases dataset
     mdFWeek:'All',mdFTopic:'All',mdFKeyword:'',
+    mdSel:null,
   };
 }
 
@@ -166,7 +167,7 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v5';
+const VER='v6';
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -519,7 +520,7 @@ function renderNav(){
   const tabs=[
     {k:'dashboard',l:'Home',ic:'🏠',c:undefined},
     {k:'cases',l:'WJ Cases',ic:'📋',c:d.cases.length},
-    ...(S.view==='l2rr'?[{k:'markdown',l:'Markdown',ic:'📄',c:undefined}]:[]),
+    ...(S.view==='l2rr'?[{k:'markdown',l:'Markdown Cases',ic:'📄',c:undefined}]:[]),
     {k:'tips',l:'QA Tips',ic:'💡',c:d.tips.length},
     {k:'quiz',l:'Quiz',ic:'🧠',c:undefined},
     {k:'scores',l:'Quiz Scores',ic:'📝',c:undefined},
@@ -537,7 +538,7 @@ function render(){renderNav();const m=$('main');const st=m.scrollTop;const d=V()
   switch(S.tab){
     case 'dashboard':m.innerHTML=rDash();break;
     case 'cases':m.innerHTML=d.sel?rCaseDetail():rCases();break;
-    case 'markdown':m.innerHTML=rMarkdown();break;
+    case 'markdown':m.innerHTML=V().mdSel?rMdCaseDetail():rMarkdown();break;
     case 'tips':m.innerHTML=rTips();break;
     case 'quiz':m.innerHTML=rQuiz();break;
     case 'scores':m.innerHTML=rScores();break;
@@ -659,22 +660,6 @@ function rCaseDetail(){const c=V().sel;if(!c)return '';
   </div></div></div>`;}
 
 /* ═══ MARKDOWN (L2RR only) ═══ */
-function buildMarkdownText(cases){
-  if(!cases.length) return '_(No cases match the current filters.)_';
-  let md = '# L2RR — Markdown Cases\n\n';
-  groupByWeek(cases).forEach(([w,wc])=>{
-    md += '---\n\n## '+w+'\n\n';
-    wc.forEach((c,i)=>{
-      md += '### Case '+(i+1)+': '+( c.returnReason||'—')+'\n\n';
-      const rca=[c.rcaL1,c.rcaL2,c.rcaL3].filter(Boolean).join(' → ');
-      if(rca) md += '**RCA:** '+rca+'\n\n';
-      if(c.findings)   md += '**📝 Findings:**  \n'+c.findings+'\n\n';
-      if(c.painPoint)  md += '**🎯 Pain Point:**  \n'+c.painPoint+'\n\n';
-      if(c.keyLesson)  md += '**💡 Key Lesson:**  \n'+c.keyLesson+'\n\n';
-    });
-  });
-  return md.trim();
-}
 
 function rMarkdown(){
   const d=V();
@@ -686,35 +671,11 @@ function rMarkdown(){
     (d.mdFTopic==='All'||c.returnReason===d.mdFTopic)&&
     (!d.mdFKeyword||[c.findings,c.painPoint,c.keyLesson,c.returnReason,c.rcaL3].join(' ').toLowerCase().includes(d.mdFKeyword.toLowerCase()))
   );
-  const mdText = buildMarkdownText(f);
-
-  const weekBlocks = groupByWeek(f).map(([w,wc])=>{
-    const blockText = '## '+w+'\n\n'+wc.map((c,i)=>{
-      let t = '### Case '+(i+1)+': '+(c.returnReason||'—')+'\n\n';
-      const rca=[c.rcaL1,c.rcaL2,c.rcaL3].filter(Boolean).join(' → ');
-      if(rca) t += '**RCA:** '+rca+'\n\n';
-      if(c.findings)  t += '**📝 Findings:**  \n'+c.findings+'\n\n';
-      if(c.painPoint) t += '**🎯 Pain Point:**  \n'+c.painPoint+'\n\n';
-      if(c.keyLesson) t += '**💡 Key Lesson:**  \n'+c.keyLesson+'\n\n';
-      return t;
-    }).join('---\n\n');
-    return `<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>
-    <div class="card" style="padding:20px 24px;background:#F8FAFC;margin-bottom:4px">
-      <pre id="md-block-${esc(w)}" style="font-family:'Courier New',monospace;font-size:12.5px;line-height:1.85;white-space:pre-wrap;word-break:break-word;margin:0;color:#1A1A1A">${esc(blockText)}</pre>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end">
-        <button class="btn-sm btn-edit" onclick="copyMdBlock('md-block-${esc(w)}')">📋 Copy Week</button>
-      </div>
-    </div>`;
-  }).join('');
 
   return `<div class="pg">
-  <textarea id="md-full-text" style="position:fixed;left:-9999px;top:-9999px;opacity:0" aria-hidden="true">${esc(mdText)}</textarea>
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
-    <div>
-      <h1 style="font-size:24px;font-weight:900;margin-bottom:4px">📄 Markdown</h1>
-      <p style="font-size:14px;color:#6B7280">L2RR cases as copyable Markdown — paste directly into Notion, Confluence, or any .md file.</p>
-    </div>
-    <button class="btn-primary" style="padding:10px 22px;display:flex;align-items:center;gap:8px;flex-shrink:0" onclick="copyMdAll()">📋 Copy All Markdown</button>
+  <div style="margin-bottom:18px">
+      <h1 style="font-size:24px;font-weight:900;margin-bottom:4px">📄 Markdown Cases</h1>
+      <p style="font-size:14px;color:#6B7280">Review markdown cases and learn from each one.</p>
   </div>
   <div class="card" style="padding:14px 20px;margin-bottom:12px">
     <div class="filter-row">
@@ -723,33 +684,47 @@ function rMarkdown(){
       <span class="filter-label">Search:</span><input class="inp" style="flex:1;min-width:180px" placeholder="Search..." value="${esc(d.mdFKeyword)}" oninput="V().mdFKeyword=this.value;render()">
     </div>
   </div>
-  <div class="notif" style="background:#EFF6FF;border:1px solid rgba(37,99,235,.2)"><span style="font-size:18px">📄</span><span style="font-size:13px;color:#2563EB;font-weight:600">${f.length} case${f.length!==1?'s':''} shown. Use <b>Copy Week</b> for a single week or <b>Copy All Markdown</b> for everything.</span></div>
+  <div class="notif" style="background:#EFF6FF;border:1px solid rgba(37,99,235,.2)"><span style="font-size:18px">💡</span><span style="font-size:13px;color:#2563EB;font-weight:600">Click on any case below to open full details, coaching notes, and key lessons.</span></div>
   ${!f.length?'<div class="text-center" style="padding:40px;color:#6B7280">No cases match.</div>':''}
-  ${weekBlocks}
+  ${groupByWeek(f).map(([w,wc])=>{
+    return `<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>
+    ${wc.map((c,idx)=>{
+      const cKey=c.id||[c.week,c.returnReason,idx].join('|');
+      return `<div class="card card-hover pointer" style="padding:18px 22px" onclick="openMdCase('${esc(cKey)}')">
+        <div class="flex-w mb8"><span style="font-size:15px;font-weight:800">${esc(c.returnReason)}</span> ${badge(c.rcaL1||'','#DC2626','#FEF2F2')} ${badge(c.rcaL3||'','#EE4D2D','#FFF5F2')}</div>
+        <div style="font-size:13px;color:#444;line-height:1.7;margin-bottom:8px">${esc(c.findings||'')}</div>
+        ${c.painPoint?`<div style="font-size:12px;color:#D94420;font-weight:600;margin-bottom:6px">🎯 ${esc(c.painPoint)}</div>`:''}
+        ${c.keyLesson?`<div style="font-size:12px;color:#059669;font-weight:600;background:#ECFDF5;padding:6px 12px;border-radius:8px;display:inline-block">💡 ${esc(c.keyLesson)}</div>`:''}
+      </div>`;
+    }).join('')}`;
+  }).join('')}
   </div>`;
 }
 
-function copyMdAll(){
-  const ta=document.getElementById('md-full-text');
-  if(!ta) return;
-  _copyText(ta.value||ta.textContent);
+function openMdCase(key){
+  const d=V();const mc=d.mdCases||[];
+  d.mdSel=mc.find(c=>{const k=c.id||[c.week,c.returnReason].join('|');return k===key;})||mc.find(c=>String(c.id)===key);
+  render();
 }
-function copyMdBlock(id){
-  const el=document.getElementById(id);
-  if(!el) return;
-  _copyText(el.textContent||el.innerText);
+
+function rMdCaseDetail(){
+  const c=V().mdSel;if(!c)return '';
+  return `<div><button class="btn-outline" style="padding:8px 16px;margin-bottom:16px" onclick="V().mdSel=null;render()">← Back to Markdown Cases</button>
+  <div class="card" style="padding:0;overflow:hidden"><div style="background:linear-gradient(135deg,#2563EB,#5B8DEF);padding:24px 28px;color:#fff">
+    <div style="font-size:11px;opacity:.8;margin-bottom:4px">MD Case${c.id?' · ID: '+esc(c.id):''}</div><h2 style="font-size:22px;font-weight:900">${esc(c.returnReason)}</h2>
+    <div class="flex-w mt8"><span style="background:rgba(255,255,255,.2);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600">${esc(c.week)}</span></div></div>
+  <div style="padding:24px 28px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:24px;padding:14px 18px;background:#EFF6FF;border-radius:12px;flex-wrap:wrap">
+      ${badge(c.rcaL1||'—','#fff','#DC2626')} <span style="color:#6B7280;font-weight:700">→</span>
+      ${badge(c.rcaL2||'—','#2563EB','#DBEAFE')} <span style="color:#6B7280;font-weight:700">→</span>
+      ${badge(c.rcaL3||'—','#1E40AF','#EFF6FF')}
+    </div>
+    ${[{l:'📝 Findings',v:c.findings},{l:'🎯 Pain Point',v:c.painPoint},{l:'💡 Key Lesson',v:c.keyLesson}].filter(s=>s.v).map(s=>`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">${s.l}</div><div style="font-size:14px;line-height:1.8;padding:14px 18px;background:#F3F4F6;border-radius:12px">${esc(s.v)}</div></div>`).join('')}
+    ${c.imageUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#2563EB;text-transform:uppercase;margin-bottom:8px">📷 Evidence</div>${isDriveUrl(c.imageUrl)?`<img src="${esc(driveEmbed(c.imageUrl))}" style="max-width:100%;border-radius:12px;border:1px solid #E5E7EB" onerror="this.style.display='none'">`:`<img src="${esc(c.imageUrl)}" style="max-width:100%;border-radius:12px;border:1px solid #E5E7EB" onerror="this.style.display='none'">`}</div>`:''}
+    ${c.videoUrl?`<div class="mb16"><div style="font-size:12px;font-weight:800;color:#2563EB;text-transform:uppercase;margin-bottom:8px">🎥 Video</div>${isDriveUrl(c.videoUrl)?`<iframe src="${esc(driveVideo(c.videoUrl))}" style="width:100%;aspect-ratio:16/9;border-radius:12px;border:none" allowfullscreen></iframe>`:`<video src="${esc(c.videoUrl)}" controls style="max-width:100%;border-radius:12px" onerror="this.style.display='none'"></video>`}</div>`:''}
+  </div></div></div>`;
 }
-function _copyText(text){
-  if(navigator.clipboard&&window.isSecureContext){
-    navigator.clipboard.writeText(text).then(()=>toast('✅ Markdown copied!')).catch(()=>_copyFallback(text));
-  } else { _copyFallback(text); }
-}
-function _copyFallback(text){
-  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
-  document.body.appendChild(ta);ta.focus();ta.select();
-  try{document.execCommand('copy');toast('✅ Markdown copied!');}catch(e){toast('Copy failed — select text manually','error');}
-  document.body.removeChild(ta);
-}
+
 
 /* ═══ TIPS ═══ */
 function rTips(){const d=V();const cs=['All',...uv(d.tips,'category')];const tw=['All',...uv(d.tips,'week')];
