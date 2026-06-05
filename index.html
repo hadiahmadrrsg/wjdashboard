@@ -614,7 +614,7 @@ function openCase(id){V().sel=V().cases.find(c=>c.id===id);S.tab='cases';render(
 
 /* ═══ CASES ═══ */
 function rCases(){const d=V();const ws=['All',...uv(d.cases,'week')];const ts=['All',...uv(d.cases,'returnReason')];
-  const f=d.cases.filter(c=>(d.fWeek==='All'||c.week===d.fWeek)&&(d.fTopic==='All'||c.returnReason===d.fTopic)&&(!d.fKeyword||[c.findings,c.coaching,c.painPoint,c.keyLesson,c.returnReason,c.rcaL3].join(' ').toLowerCase().includes(d.fKeyword.toLowerCase())));
+  const f=d.cases.filter(c=>(d.fWeek==='All'||c.week===d.fWeek)&&(d.fTopic==='All'||c.returnReason===d.fTopic)&&(!d.fKeyword||[c.id,c.findings,c.coaching,c.painPoint,c.keyLesson,c.returnReason,c.rcaL3].join(' ').toLowerCase().includes(d.fKeyword.toLowerCase())));
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:4px">📋 WJ Cases</h1><p style="font-size:14px;color:#6B7280;margin-bottom:18px">Review wrong judgement cases and learn from each one.</p>
   <div class="card" style="padding:14px 20px;margin-bottom:12px"><div class="filter-row">
     <span class="filter-label">Week:</span>${dd('fw',d.fWeek,ws,'All Weeks',"V().fWeek=this.value;render()")}
@@ -624,7 +624,8 @@ function rCases(){const d=V();const ws=['All',...uv(d.cases,'week')];const ts=['
   <div class="notif" style="background:#EFF6FF;border:1px solid rgba(37,99,235,.2)"><span style="font-size:18px">💡</span><span style="font-size:13px;color:#2563EB;font-weight:600">Click any case to view full details, coaching notes, and key lessons.</span></div>
   ${!f.length?'<div class="text-center" style="padding:40px;color:#6B7280">No cases match.</div>':''}
   ${groupByWeek(f).map(([w,wc])=>`<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>${wc.map(c=>`<div class="card card-hover pointer" style="padding:18px 22px" onclick="openCase('${c.id}')">
-    <div class="flex-w mb8">${esc(c.returnReason)} ${badge(c.rcaL1,'#DC2626','#FEF2F2')} ${badge(c.rcaL3,'#EE4D2D','#FFF5F2')}</div>
+    ${c.id?`<div style="font-size:11px;color:#9CA3AF;font-weight:600;margin-bottom:4px">ID: ${esc(c.id)}</div>`:''}
+    <div class="flex-w mb8"><span style="font-size:15px;font-weight:800">${esc(c.returnReason)}</span> ${badge(c.rcaL1,'#DC2626','#FEF2F2')} ${badge(c.rcaL3,'#EE4D2D','#FFF5F2')}</div>
     <div style="font-size:13px;color:#444;line-height:1.7;margin-bottom:8px">${esc(c.findings)}</div>
     ${c.painPoint?`<div style="font-size:12px;color:#D94420;font-weight:600;margin-bottom:6px">🎯 ${esc(c.painPoint)}</div>`:''}
     ${c.keyLesson?`<div style="font-size:12px;color:#059669;font-weight:600;background:#ECFDF5;padding:6px 12px;border-radius:8px;display:inline-block">💡 ${esc(c.keyLesson)}</div>`:''}
@@ -669,7 +670,7 @@ function rMarkdown(){
   const f=mc.filter(c=>
     (d.mdFWeek==='All'||c.week===d.mdFWeek)&&
     (d.mdFTopic==='All'||c.returnReason===d.mdFTopic)&&
-    (!d.mdFKeyword||[c.findings,c.painPoint,c.keyLesson,c.returnReason,c.rcaL3].join(' ').toLowerCase().includes(d.mdFKeyword.toLowerCase()))
+    (!d.mdFKeyword||[c.id,c.findings,c.painPoint,c.keyLesson,c.returnReason,c.rcaL3].join(' ').toLowerCase().includes(d.mdFKeyword.toLowerCase()))
   );
 
   return `<div class="pg">
@@ -691,6 +692,7 @@ function rMarkdown(){
     ${wc.map((c,idx)=>{
       const cKey=c.id||[c.week,c.returnReason,idx].join('|');
       return `<div class="card card-hover pointer" style="padding:18px 22px" onclick="openMdCase('${esc(cKey)}')">
+        ${c.id?`<div style="font-size:11px;color:#9CA3AF;font-weight:600;margin-bottom:4px">ID: ${esc(c.id)}</div>`:''}
         <div class="flex-w mb8"><span style="font-size:15px;font-weight:800">${esc(c.returnReason)}</span> ${badge(c.rcaL1||'','#DC2626','#FEF2F2')} ${badge(c.rcaL3||'','#EE4D2D','#FFF5F2')}</div>
         <div style="font-size:13px;color:#444;line-height:1.7;margin-bottom:8px">${esc(c.findings||'')}</div>
         ${c.painPoint?`<div style="font-size:12px;color:#D94420;font-weight:600;margin-bottom:6px">🎯 ${esc(c.painPoint)}</div>`:''}
