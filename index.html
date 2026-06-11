@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v7</title>
+<title>WJ Dashboard v8</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -167,7 +167,7 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v7';
+const VER='v8';
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -524,6 +524,7 @@ function renderNav(){
     {k:'tips',l:'QA Tips',ic:'💡',c:d.tips.length},
     {k:'quiz',l:'Quiz',ic:'🧠',c:undefined},
     {k:'scores',l:'Quiz Scores',ic:'📝',c:undefined},
+    {k:'myacks',l:'My Acks',ic:'✅',c:(d.acks||[]).filter(a=>a.username===_currentUsername).length||undefined},
   ];
   $('nav').innerHTML=tabs.map(t=>`<button class="nav-btn ${S.tab===t.k?'active':''}" onclick="switchTab('${t.k}')"><span class="icon">${t.ic}</span><span class="label">${t.l}</span>${t.c!==undefined?`<span class="count">${t.c}</span>`:''}</button>`).join('');
   $('nav-admin').innerHTML=`<button class="nav-btn ${S.tab==='admin'?'active':''}" onclick="switchTab('admin')"><span class="icon">⚙️</span><span class="label">Admin</span></button>`;
@@ -542,6 +543,7 @@ function render(){renderNav();const m=$('main');const st=m.scrollTop;const d=V()
     case 'tips':m.innerHTML=rTips();break;
     case 'quiz':m.innerHTML=rQuiz();break;
     case 'scores':m.innerHTML=rScores();break;
+    case 'myacks':m.innerHTML=rMyAcks();break;
     case 'admin':m.innerHTML=rAdmin();break;
   }
   if(tabChanged){m.scrollTop=0;m.firstElementChild&&m.firstElementChild.classList.add('fadeUp');}
@@ -623,12 +625,13 @@ function rCases(){const d=V();const ws=['All',...uv(d.cases,'week')];const ts=['
   </div></div>
   <div class="notif" style="background:#EFF6FF;border:1px solid rgba(37,99,235,.2)"><span style="font-size:18px">💡</span><span style="font-size:13px;color:#2563EB;font-weight:600">Click any case to view full details, coaching notes, and key lessons.</span></div>
   ${!f.length?'<div class="text-center" style="padding:40px;color:#6B7280">No cases match.</div>':''}
-  ${groupByWeek(f).map(([w,wc])=>`<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>${wc.map(c=>{const ck=(c.id&&String(c.id).trim()&&String(c.id).trim()!=='undefined')?String(c.id).trim():[c.week,c.returnReason,c.rcaL1].join('|');const acked=hasAcked('case',ck);return `<div class="card card-hover pointer" style="padding:18px 22px${acked?';border-left:4px solid #059669':''}" onclick="openCase('${c.id}')">
+  ${groupByWeek(f).map(([w,wc])=>`<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>${wc.map(c=>{const ck=(c.id&&String(c.id).trim()&&String(c.id).trim()!=='undefined')?String(c.id).trim():[c.week,c.returnReason,c.rcaL1].join('|');const acked=hasAcked('case',ck);return `<div class="card card-hover pointer" style="padding:18px 22px" onclick="openCase('${c.id}')">
     ${c.id?`<div style="font-size:11px;color:#9CA3AF;font-weight:600;margin-bottom:4px">ID: ${esc(c.id)}</div>`:''}
-    <div class="flex-w mb8"><span style="font-size:15px;font-weight:800">${esc(c.returnReason)}</span> ${badge(c.rcaL1,'#DC2626','#FEF2F2')} ${badge(c.rcaL3,'#EE4D2D','#FFF5F2')} ${acked?'<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#ECFDF5;color:#059669;border:1px solid #A7F3D0">✅ Acknowledged</span>':''}</div>
+    <div class="flex-w mb8"><span style="font-size:15px;font-weight:800">${esc(c.returnReason)}</span> ${badge(c.rcaL1,'#DC2626','#FEF2F2')} ${badge(c.rcaL3,'#EE4D2D','#FFF5F2')}</div>
     <div style="font-size:13px;color:#444;line-height:1.7;margin-bottom:8px">${esc(c.findings)}</div>
     ${c.painPoint?`<div style="font-size:12px;color:#D94420;font-weight:600;margin-bottom:6px">🎯 ${esc(c.painPoint)}</div>`:''}
     ${c.keyLesson?`<div style="font-size:12px;color:#059669;font-weight:600;background:#ECFDF5;padding:6px 12px;border-radius:8px;display:inline-block">💡 ${esc(c.keyLesson)}</div>`:''}
+    ${acked?'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #E5E7EB"><span style="display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#ECFDF5;color:#059669;border:1.5px solid #059669">✅ Acknowledged</span></div>':''}
   </div>`;}).join('')}`).join('')}</div>`;}
 
 /* Convert Google Drive share URL to direct embeddable URL */
@@ -692,12 +695,13 @@ function rMarkdown(){
     return `<div class="week-hdr"><div class="week-tag">${esc(w)}</div></div>
     ${wc.map((c,idx)=>{
       const cKey=c.id||[c.week,c.returnReason,idx].join('|');
-      return `<div class="card card-hover pointer" style="padding:18px 22px${hasAcked('case',cKey)?';border-left:4px solid #059669':''}" onclick="openMdCase('${esc(cKey)}')">
+      return `<div class="card card-hover pointer" style="padding:18px 22px" onclick="openMdCase('${esc(cKey)}')">
         ${c.id?`<div style="font-size:11px;color:#9CA3AF;font-weight:600;margin-bottom:4px">ID: ${esc(c.id)}</div>`:''}
-        <div class="flex-w mb8"><span style="font-size:15px;font-weight:800">${esc(c.returnReason)}</span> ${badge(c.rcaL1||'','#DC2626','#FEF2F2')} ${badge(c.rcaL3||'','#EE4D2D','#FFF5F2')} ${hasAcked('case',cKey)?'<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#ECFDF5;color:#059669;border:1px solid #A7F3D0">✅ Acknowledged</span>':''}</div>
+        <div class="flex-w mb8"><span style="font-size:15px;font-weight:800">${esc(c.returnReason)}</span> ${badge(c.rcaL1||'','#DC2626','#FEF2F2')} ${badge(c.rcaL3||'','#EE4D2D','#FFF5F2')}</div>
         <div style="font-size:13px;color:#444;line-height:1.7;margin-bottom:8px">${esc(c.findings||'')}</div>
         ${c.painPoint?`<div style="font-size:12px;color:#D94420;font-weight:600;margin-bottom:6px">🎯 ${esc(c.painPoint)}</div>`:''}
         ${c.keyLesson?`<div style="font-size:12px;color:#059669;font-weight:600;background:#ECFDF5;padding:6px 12px;border-radius:8px;display:inline-block">💡 ${esc(c.keyLesson)}</div>`:''}
+        ${hasAcked('case',cKey)?'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #E5E7EB"><span style="display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#ECFDF5;color:#059669;border:1.5px solid #059669">✅ Acknowledged</span></div>':''}
       </div>`;
     }).join('')}`;
   }).join('')}
@@ -870,6 +874,65 @@ function rScores(){const d=V();
 ${d.ok?`<div style="font-size:13px"><span style="font-weight:700;color:#059669">✓ Correct answer:</span> ${esc(d.correct)}</div>`
 :`<div style="font-size:13px;margin-bottom:4px"><span style="font-weight:700;color:#DC2626">Your answer:</span> ${esc(d.selected)}</div><div style="font-size:13px"><span style="font-weight:700;color:#059669">Correct answer:</span> ${esc(d.correct)}</div>`}
 </div>`).join('')}`).join('');})()}</div>`:''}`}).join('')}</div>`;}
+
+/* ═══ MY ACKNOWLEDGEMENTS ═══ */
+function rMyAcks(){
+  const d=V();
+  const myAcks=(d.acks||[]).filter(a=>a.username===_currentUsername);
+  const caseAcks=myAcks.filter(a=>a.type==='case');
+  const tipAcks=myAcks.filter(a=>a.type==='tip');
+  const totalCases=d.cases.length;
+  const totalTips=d.tips.length;
+  const casePct=totalCases?Math.round(caseAcks.length/totalCases*100):0;
+  const tipPct=totalTips?Math.round(tipAcks.length/totalTips*100):0;
+
+  if(!_currentUsername) return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">✅ My Acknowledgements</h1><div class="card text-center" style="padding:40px"><div style="font-size:56px;margin-bottom:12px">✅</div><h3 style="font-weight:800;margin-bottom:8px">Set your name first</h3><p style="color:#6B7280;font-size:13px;margin-bottom:16px">Take a quiz to set your username, then your acknowledgements will appear here.</p><button class="btn-primary" onclick="switchTab('quiz')" style="margin-top:8px">Go to Quiz</button></div></div>`;
+
+  /* Find the actual case/tip objects for each ack */
+  function findCase(ackId){return d.cases.find(c=>{const k=(c.id&&String(c.id).trim()&&String(c.id).trim()!=='undefined')?String(c.id).trim():[c.week,c.returnReason,c.rcaL1].join('|');return k===ackId;});}
+  function findTip(ackId){return d.tips.find(t=>String(t.id)===ackId);}
+
+  return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:4px">✅ My Acknowledgements</h1>
+  <p style="font-size:14px;color:#6B7280;margin-bottom:18px">Track what you've read and understood.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
+    <div class="card text-center" style="padding:18px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:6px">Cases Acked</div><div style="font-size:28px;font-weight:900;color:#059669">${caseAcks.length}<span style="font-size:14px;color:#6B7280;font-weight:600"> / ${totalCases}</span></div><div style="margin-top:8px;height:6px;border-radius:3px;background:#F3F4F6;overflow:hidden"><div style="height:100%;border-radius:3px;background:linear-gradient(90deg,#059669,#10B981);width:${casePct}%"></div></div><div style="font-size:11px;color:#6B7280;margin-top:4px">${casePct}%</div></div>
+    <div class="card text-center" style="padding:18px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:6px">Tips Acked</div><div style="font-size:28px;font-weight:900;color:#2563EB">${tipAcks.length}<span style="font-size:14px;color:#6B7280;font-weight:600"> / ${totalTips}</span></div><div style="margin-top:8px;height:6px;border-radius:3px;background:#F3F4F6;overflow:hidden"><div style="height:100%;border-radius:3px;background:linear-gradient(90deg,#2563EB,#5B8DEF);width:${tipPct}%"></div></div><div style="font-size:11px;color:#6B7280;margin-top:4px">${tipPct}%</div></div>
+    <div class="card text-center" style="padding:18px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:6px">Total</div><div style="font-size:28px;font-weight:900;color:#EE4D2D">${myAcks.length}</div><div style="font-size:11px;color:#6B7280;margin-top:4px">out of ${totalCases+totalTips}</div></div>
+  </div>
+
+  ${caseAcks.length?`<h3 style="font-size:15px;font-weight:800;margin-bottom:12px">📋 Acknowledged Cases</h3>
+  ${caseAcks.slice().reverse().map(a=>{const c=findCase(a.id);return `<div class="card" style="padding:16px 22px;margin-bottom:10px;border-left:4px solid #059669">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        ${c?`<div style="font-size:15px;font-weight:800;margin-bottom:4px">${esc(c.returnReason)}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">${c.id?'<span style="font-size:11px;color:#9CA3AF;font-weight:600">ID: '+esc(c.id)+'</span>':''} ${badge(c.week||'','#EE4D2D','#FFF5F2')} ${badge(c.rcaL1||'','#DC2626','#FEF2F2')} ${badge(c.rcaL3||'','#EE4D2D','#FFF5F2')}</div>
+        ${c.painPoint?'<div style="font-size:12px;color:#D94420;font-weight:600">🎯 '+esc(c.painPoint)+'</div>':''}
+        ${c.keyLesson?'<div style="font-size:12px;color:#059669;font-weight:600;margin-top:4px">💡 '+esc(c.keyLesson)+'</div>':''}`
+        :`<div style="font-size:14px;font-weight:700;color:#6B7280">Case: ${esc(a.id)}</div>`}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:11px;color:#6B7280">${esc(a.date||'')}</div>
+        ${c?`<button class="btn-outline" style="padding:6px 14px;font-size:11px;margin-top:6px" onclick="V().sel=V().cases.find(x=>x.id==='${esc(c.id)}');S.tab='cases';render()">View Case →</button>`:''}
+      </div>
+    </div>
+  </div>`;}).join('')}`:''}
+
+  ${tipAcks.length?`<h3 style="font-size:15px;font-weight:800;margin-bottom:12px;margin-top:20px">💡 Acknowledged Tips</h3>
+  ${tipAcks.slice().reverse().map(a=>{const t=findTip(a.id);return `<div class="card" style="padding:16px 22px;margin-bottom:10px;border-left:4px solid #2563EB">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        ${t?`<div style="font-size:15px;font-weight:800;margin-bottom:4px">${esc(t.title)}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${badge(t.category||'','#2563EB','#EFF6FF')} ${badge(t.week||'','#EE4D2D','#FFF5F2')}</div>`
+        :`<div style="font-size:14px;font-weight:700;color:#6B7280">Tip: ${esc(a.id)}</div>`}
+      </div>
+      <div style="text-align:right;flex-shrink:0"><div style="font-size:11px;color:#6B7280">${esc(a.date||'')}</div></div>
+    </div>
+  </div>`;}).join('')}`:''}
+
+  ${!myAcks.length?`<div class="card text-center" style="padding:40px"><div style="font-size:48px;margin-bottom:12px">📭</div><h3 style="font-weight:800;margin-bottom:8px">Nothing acknowledged yet</h3><p style="font-size:13px;color:#6B7280">Open a case or tip and click "I've Read & Understood This" to track it here.</p></div>`:''}
+  </div>`;
+}
 
 /* ═══ ADMIN ═══ */
 function rAdmin(){const d=V();
