@@ -378,7 +378,7 @@ function loadAllFromFirebase(){
   const fields = ['cases','tips','customQs','kudos','reminder','scores','acks','mdCases'];
   let pending = views.length * fields.length + 1; // +1 for _lastSheetSync
 
-  function done(){ pending--; if(pending===0){ render(); fbStatus('ok'); subscribeAll(); } }
+  function done(){ pending--; if(pending===0){ loadAcks(); render(); fbStatus('ok'); subscribeAll(); } }
 
   // Read last sheet push timestamp set by Apps Script trigger
   _fbDB.ref('_lastSheetSync').once('value', snap => {
@@ -414,6 +414,7 @@ function subscribeAll(){
         const val = snap.val();
         if(f === 'reminder'){ const v5=Array.isArray(val)?val:(val?[val]:[]);while(v5.length<5)v5.push('');S[v].reminder=v5; }
         else { S[v][f] = val ? (Array.isArray(val) ? val : Object.values(val)) : []; }
+        if(f === 'acks') loadAcks(); // merge localStorage acks back in
         render();
       });
     });
@@ -494,6 +495,28 @@ function saveScores(){
 function loadScores(){
   // Only used as fallback when Firebase is not configured
   try{['dms','l2rr','p1'].forEach(v=>{const d=localStorage.getItem('wj_scores_'+v);if(d)S[v].scores=JSON.parse(d);});}catch(e){}
+}
+
+/* Acknowledgements — saved to Firebase + always localStorage as backup */
+function saveAcks(){
+  ['dms','l2rr','p1'].forEach(v => {
+    if(_fbReady) saveToFirebase(v,'acks');
+    try{ localStorage.setItem('wj_acks_'+v, JSON.stringify(S[v].acks||[])); }catch(e){}
+  });
+}
+function loadAcks(){
+  // Merge localStorage acks into current state (don't replace — Firebase may have loaded its own)
+  try{['dms','l2rr','p1'].forEach(v=>{
+    const raw=localStorage.getItem('wj_acks_'+v);
+    if(!raw) return;
+    const local=JSON.parse(raw);
+    if(!local.length) return;
+    const existing=S[v].acks||[];
+    local.forEach(a=>{
+      if(!existing.find(e=>e.type===a.type&&e.id===a.id&&e.username===a.username)) existing.push(a);
+    });
+    S[v].acks=existing;
+  });}catch(e){}
 }
 
 /* Drag-drop file helper — returns base64 data URL */
@@ -1076,7 +1099,7 @@ function acknowledgeCurrentCase(){
   const c = V().sel;
   if(!c){ toast('No case selected','error'); return; }
   // Use id if available, otherwise fall back to a combination of fields as unique key
-  const id = (c.id && String(c.id).trim()) ? String(c.id).trim() : [c.week,c.returnReason,c.rcaL1].join('|');
+  const id = (c.id && String(c.id).trim() && String(c.id).trim()!=='undefined') ? String(c.id).trim() : [c.week,c.returnReason,c.rcaL1].join('|');
   acknowledge('case', id);
 }
 
@@ -1087,6 +1110,7 @@ function acknowledge(type, id){
   if(already){ toast('You already acknowledged this '+type,'error'); return; }
   if(!d.acks) d.acks=[];
   d.acks.push({type,id:String(id),username:_currentUsername,bpo:_currentBPO||'',date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+  saveAcks();
   toast('✅ Acknowledged!');
   render();
 }
@@ -1416,6 +1440,7 @@ function exportData(target){const d=V();var data,fn;
   var ws=XLSX.utils.json_to_sheet(data);var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Sheet1');XLSX.writeFile(wb,fn);toast('Exported '+fn);}
 
 loadScores();
+loadAcks();
 loadUsername();
 _fileCallbacks['nc-img']=function(d){V()._ncImgData=d;};
 _fileCallbacks['nc-vid']=function(d){V()._ncVidData=d;};
