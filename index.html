@@ -690,8 +690,13 @@ function loadAllFromFirebase(){
           if(f==='reminder'){ const a=Array.isArray(val)?val:(val?[val]:[]);while(a.length<5)a.push('');S[v].reminder=a; }
           else{ S[v][f]=Array.isArray(val)?val:Object.values(val||{}); }
         }
+        // Diagnostic: log what each path returned (visible in browser console F12)
+        if(f==='cases' || f==='tips'){
+          const n = val===null ? 'null (empty)' : (Array.isArray(val)?val.length:Object.keys(val).length)+' items';
+          console.log('[WJ load] '+fbPath(v,f)+' → '+n);
+        }
         done();
-      }, () => done());
+      }, err => { console.warn('[WJ load] READ FAILED for '+fbPath(v,f)+':', err && err.code); done(); });
     });
   });
 }
@@ -954,9 +959,26 @@ function rDash(){const d=V();const vn=viewNames[S.view];const vc=viewColors[S.vi
 
 function rKudosPodium(d){
   if(!d.kudos.length)return `<div class="card"><h3 style="font-size:17px;font-weight:800;margin-bottom:12px">🏆 Kudos Chart</h3><div class="text-center" style="padding:16px;color:#6B7280">No kudos yet. Add from Admin → Kudos.</div></div>`;
-  const vads=d.kudos.filter(k=>k.team==='Vads');const eperf=d.kudos.filter(k=>k.team==='ePerformax');
+
+  // Auto-detect the teams present in the data (no hardcoded team names).
+  // A rotating palette gives each team a distinct colour.
+  const palette=['#EE4D2D','#2563EB','#059669','#7C3AED','#D97706','#DB2777'];
+  const teamOrder=[];
+  d.kudos.forEach(k=>{ const t=(k.team||'Unassigned').trim()||'Unassigned'; if(teamOrder.indexOf(t)<0) teamOrder.push(t); });
+  const teamColor={};
+  teamOrder.forEach((t,i)=>{ teamColor[t]=palette[i%palette.length]; });
+
+  function sortByScore(list){
+    return list.slice().sort((a,b)=>{
+      const na=parseFloat(String(a.score).replace(/[^0-9.]/g,''))||0;
+      const nb=parseFloat(String(b.score).replace(/[^0-9.]/g,''))||0;
+      return nb-na;
+    });
+  }
+
   function miniPodium(list,teamName,color){
-    if(!list.length)return `<div class="text-center" style="padding:20px;color:#6B7280">No entries for ${teamName}</div>`;
+    if(!list.length)return `<div class="text-center" style="padding:20px;color:#6B7280">No entries for ${esc(teamName)}</div>`;
+    list=sortByScore(list);
     const medals=['🥇','🥈','🥉'];const heights=[100,130,80];
     return `<div style="text-align:center;margin-bottom:8px"><span style="font-size:15px;font-weight:800;color:${color}">${esc(teamName)}</span></div>
     <div style="display:flex;justify-content:center;align-items:flex-end;gap:12px;padding:10px 0">
@@ -976,10 +998,18 @@ function rKudosPodium(d){
         </div>`;}).join('')}
     </div>
     ${list.length>3?`<div style="margin-top:8px">${list.slice(3).map((k,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;margin-bottom:4px;background:#F3F4F6;font-size:12px"><span style="font-weight:900;color:#6B7280;width:20px">${i+4}</span><span style="font-weight:700;flex:1">${esc(k.name)}</span><span style="font-weight:800;color:${color}">${esc(k.score)}</span></div>`).join('')}</div>`:''}`;}
+
+  // Build one podium per detected team; responsive grid.
+  const cols = Math.min(teamOrder.length, 2);
+  const panels = teamOrder.map((t,i)=>{
+    const list=d.kudos.filter(k=>((k.team||'Unassigned').trim()||'Unassigned')===t);
+    const border = (i%cols!==cols-1 && i<teamOrder.length-1) ? 'border-right:1px solid #E5E7EB;padding-right:16px' : 'padding-left:8px';
+    return `<div style="${i%cols===0?'padding-right:16px':'padding-left:8px'}${cols>1&&i%cols===0?';border-right:1px solid #E5E7EB':''}">${miniPodium(list,t,teamColor[t])}</div>`;
+  }).join('');
+
   return `<div class="card"><h3 style="font-size:17px;font-weight:800;margin-bottom:18px">🏆 Kudos Chart — Top Performers</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-      <div style="border-right:1px solid #E5E7EB;padding-right:16px">${miniPodium(vads,'Vads','#EE4D2D')}</div>
-      <div style="padding-left:8px">${miniPodium(eperf,'ePerformax','#2563EB')}</div>
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:24px">
+      ${panels}
     </div></div>`;}
 
 function rRCA(title,data,total,c1,bg1,c2){
