@@ -712,8 +712,19 @@ function subscribeAll(){
       const ref = _fbDB.ref(fbPath(v, f));
       _fbListeners[key] = ref.on('value', snap => {
         const val = snap.val();
-        if(f === 'reminder'){ const v5=Array.isArray(val)?val:(val?[val]:[]);while(v5.length<5)v5.push('');S[v].reminder=v5; }
-        else { S[v][f] = val ? (Array.isArray(val) ? val : Object.values(val)) : []; }
+        if(f === 'reminder'){
+          const v5=Array.isArray(val)?val:(val?[val]:[]);while(v5.length<5)v5.push('');S[v].reminder=v5;
+        } else {
+          const incoming = val ? (Array.isArray(val) ? val : Object.values(val)) : [];
+          // SAFETY: don't let a transient empty/null update blank out data we
+          // already have loaded. Only replace with an empty list if we didn't
+          // have anything before either. (Real deletions still clear on reload.)
+          if(incoming.length === 0 && (S[v][f] && S[v][f].length > 0)){
+            // ignore the empty update — keep existing data
+          } else {
+            S[v][f] = incoming;
+          }
+        }
         if(f === 'acks') loadAcks();
         render();
       });
