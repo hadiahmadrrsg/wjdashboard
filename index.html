@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v9</title>
+<title>WJ Dashboard v10</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -73,10 +73,23 @@ select.inp{cursor:pointer;background:#fff}
 </style>
 </head>
 <body>
+<!-- ═══ LOGIN GATE (blocks the whole app until signed in) ═══ -->
+<div id="login-gate" style="display:none;position:fixed;inset:0;z-index:100000;background:linear-gradient(135deg,#EE4D2D,#FF7A5C);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:24px;padding:48px 40px;max-width:420px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.3);text-align:center">
+    <div style="width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#EE4D2D,#FF6B47);display:flex;align-items:center;justify-content:center;margin:0 auto 20px"><svg width="38" height="38" viewBox="0 0 120 120" fill="none"><path d="M60 16c-8 0-15 4.5-18.5 11.2h37C75 20.5 68 16 60 16z" fill="#fff"/><path d="M41 26h-1.5c-.5 0-1 .1-1.4.3A27.5 27.5 0 0032 28v.5l3 56c.3 5 4.5 9 9.5 9h31c5 0 9.2-4 9.5-9l3-56V28a27 27 0 00-6-1.7c-.5-.2-1-.3-1.5-.3H79" fill="#fff"/><text x="60" y="72" text-anchor="middle" fill="#EE4D2D" font-weight="900" font-size="38" font-family="Arial">S</text></svg></div>
+    <h1 style="font-size:24px;font-weight:900;margin-bottom:6px;color:#111">WJ Dashboard</h1>
+    <p style="font-size:14px;color:#6B7280;margin-bottom:32px">Return and Refund · Sign in to continue</p>
+    <button id="google-signin-btn" onclick="signInWithGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:14px;border-radius:12px;border:1.5px solid #E5E7EB;background:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;color:#3C4043" onmouseover="this.style.background='#F8F9FA';this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.background='#fff';this.style.boxShadow='none'">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      <span>Sign in with Google</span>
+    </button>
+    <p style="font-size:11px;color:#9CA3AF;margin-top:20px;line-height:1.6">Your name and email will be used to identify your activity. You'll choose your BPO after signing in.</p>
+  </div>
+</div>
 <div id="sidebar">
   <div class="logo-row">
     <div class="logo-icon"><svg width="36" height="36" viewBox="0 0 120 120" fill="none"><rect width="120" height="120" fill="#fff"/><path d="M60 16c-8 0-15 4.5-18.5 11.2h37C75 20.5 68 16 60 16z" fill="#EE4D2D"/><path d="M41 26h-1.5c-.5 0-1 .1-1.4.3A27.5 27.5 0 0032 28v.5l3 56c.3 5 4.5 9 9.5 9h31c5 0 9.2-4 9.5-9l3-56V28a27 27 0 00-6-1.7c-.5-.2-1-.3-1.5-.3H79" fill="#EE4D2D"/><path d="M41.5 27.2a3.2 3.2 0 01-.3-1.3 3 3 0 013-3h.3A19 19 0 0160 13a19 19 0 0115.5 9.9h.3a3 3 0 013 3c0 .5-.1.9-.3 1.3" stroke="#EE4D2D" stroke-width="5" fill="none"/><text x="60" y="72" text-anchor="middle" fill="#fff" font-weight="900" font-size="38" font-family="Arial">S</text></svg></div>
-    <div><div class="logo-title">WJ Dashboard</div><div class="logo-sub">Return and Refund</div><div id="sidebar-username" style="font-size:11px;font-weight:700;margin-top:5px;cursor:pointer" onclick="_currentUsername?showEditProfileModal():showUsernameModal('')" title="Click to sign in or edit profile"><span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:8px;background:#FEF2F2;color:#EE4D2D;border:1.5px dashed #EE4D2D;font-size:11px">👤 Sign In</span></div></div>
+    <div><div class="logo-title">WJ Dashboard</div><div class="logo-sub">Return and Refund</div><div id="sidebar-username" style="font-size:11px;font-weight:700;margin-top:5px"></div></div>
   </div>
   <div id="nav-view"></div>
   <div id="nav"></div>
@@ -111,17 +124,16 @@ select.inp{cursor:pointer;background:#fff}
 </div>
 <div id="username-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:20px;padding:40px 36px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center">
-    <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#EE4D2D,#FF6B47);display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><svg width="32" height="32" viewBox="0 0 120 120" fill="none"><path d="M60 16c-8 0-15 4.5-18.5 11.2h37C75 20.5 68 16 60 16z" fill="#fff"/><path d="M41 26h-1.5c-.5 0-1 .1-1.4.3A27.5 27.5 0 0032 28v.5l3 56c.3 5 4.5 9 9.5 9h31c5 0 9.2-4 9.5-9l3-56V28a27 27 0 00-6-1.7c-.5-.2-1-.3-1.5-.3H79" fill="#fff"/><text x="60" y="72" text-anchor="middle" fill="#EE4D2D" font-weight="900" font-size="38" font-family="Arial">S</text></svg></div>
-    <h2 style="font-size:22px;font-weight:900;margin-bottom:4px">Welcome to WJ Dashboard</h2>
-    <p style="font-size:14px;color:#6B7280;margin-bottom:24px">Enter your name and select your BPO to get started.</p>
-    <input id="username-input" class="inp" placeholder="Your full name..." style="margin-bottom:14px;font-size:15px;text-align:center" onkeydown="if(event.key==='Enter')confirmUsername()">
+    <div id="bpo-modal-avatar" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#EE4D2D,#FF6B47);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;color:#fff;font-weight:900;overflow:hidden">👤</div>
+    <h2 style="font-size:22px;font-weight:900;margin-bottom:4px" id="bpo-modal-title">One last step!</h2>
+    <p style="font-size:14px;color:#6B7280;margin-bottom:24px" id="bpo-modal-sub">Select your BPO to continue.</p>
     <p style="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Select your BPO</p>
     <div style="display:flex;gap:10px;margin-bottom:24px">
       <button id="bpo-vads" onclick="selectBPO('Vads')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Vads</button>
       <button id="bpo-ep" onclick="selectBPO('ePerformax')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">ePerformax</button>
       <button id="bpo-ar" onclick="selectBPO('Asia Recruit')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Asia Recruit</button>
     </div>
-    <button class="btn-primary" style="width:100%;padding:14px;font-size:15px" onclick="confirmUsername()">Let's Go! →</button>
+    <button class="btn-primary" style="width:100%;padding:14px;font-size:15px" onclick="confirmBpo()">Continue →</button>
   </div>
 </div>
 <script>
@@ -153,6 +165,7 @@ const S = {
   l2rr: mkView([],[],[],[]),
   p1: mkView([],[],[],[]),
   _visits: [],  // traffic log — array of {ts, day, hour, dow}
+  _feedback: [],  // user feedback — array of {text, category, username, email, bpo, date, ts}
 };
 
 /* ═══ HELPERS ═══ */
@@ -160,15 +173,37 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function V(){return S[S.view];}
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
-function groupByWeek(arr){const m={};arr.forEach(c=>{const w=c.week||'Unassigned';if(!m[w])m[w]=[];m[w].push(c);});return Object.entries(m);}
-function uv(arr,key){return[...new Set(arr.map(a=>a[key]).filter(Boolean))];}
+/* Extract the numeric part of a week label ("Week 12", "W12", "CW12" → 12) for sorting */
+function weekNum(w){
+  if(w==null) return -Infinity;
+  const m=String(w).match(/\d+/);
+  return m?parseInt(m[0],10):-Infinity;
+}
+/* Sort week labels descending (latest first). "Unassigned"/non-numeric go last. */
+function sortWeeksDesc(weeks){
+  return weeks.slice().sort((a,b)=>{
+    const na=weekNum(a), nb=weekNum(b);
+    if(na!==nb) return nb-na;              // higher week number first
+    return String(b).localeCompare(String(a));
+  });
+}
+function groupByWeek(arr){
+  const m={};
+  arr.forEach(c=>{const w=c.week||'Unassigned';if(!m[w])m[w]=[];m[w].push(c);});
+  // Return groups ordered latest-week-first
+  return sortWeeksDesc(Object.keys(m)).map(w=>[w,m[w]]);
+}
+function uv(arr,key){
+  const vals=[...new Set(arr.map(a=>a[key]).filter(Boolean))];
+  return key==='week'?sortWeeksDesc(vals):vals;
+}
 function countBy(arr,key){const m={};arr.forEach(a=>{const v=a[key];m[v]=(m[v]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
 function toast(msg,type){const t=$('toast');t.textContent=msg;t.style.background=type==='error'?'#DC2626':'#059669';t.style.display='block';setTimeout(()=>{t.style.display='none';},3000);}
 function badge(text,color,bg){return `<span class="badge" style="color:${color};background:${bg}">${esc(text)}</span>`;}
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v9';
+const VER='v10';
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -185,16 +220,30 @@ function loadUsername(){
 function updateSidebarUsername(){
   const el = document.getElementById('sidebar-username');
   if(!el) return;
-  if(_currentUsername){
+  if(_authUser){
     const bpoColor = _currentBPO==='Vads'?'#EE4D2D':_currentBPO==='ePerformax'?'#2563EB':_currentBPO==='Asia Recruit'?'#059669':'#6B7280';
     const bpoBg = _currentBPO==='Vads'?'#FFF5F2':_currentBPO==='ePerformax'?'#EFF6FF':_currentBPO==='Asia Recruit'?'#ECFDF5':'#F3F4F6';
-    el.onclick=function(){showEditProfileModal();};
-    el.title='Click to edit profile';
-    el.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:8px;background:'+bpoBg+';color:'+bpoColor+';border:1.5px solid '+bpoColor+';font-size:11px">👤 '+esc(_currentUsername)+(_currentBPO?' <span style="background:'+bpoColor+';color:#fff;padding:1px 7px;border-radius:6px;font-size:10px;margin-left:2px">'+esc(_currentBPO)+'</span>':'')+'</span>';
+    const photo = _authUser.photoURL ? '<img src="'+_authUser.photoURL+'" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0" referrerpolicy="no-referrer">' : '<span style="width:26px;height:26px;border-radius:50%;background:'+bpoColor+';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">'+esc((_currentUsername||'U').charAt(0).toUpperCase())+'</span>';
+    el.onclick=null;
+    el.style.cursor='default';
+    el.title='';
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#F9FAFB;border:1px solid #E5E7EB;margin-top:4px">'+
+        photo+
+        '<div style="flex:1;min-width:0;text-align:left">'+
+          '<div style="font-size:12px;font-weight:800;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(_currentUsername)+'</div>'+
+          '<div style="font-size:10px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(_authUser.email||'')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">'+
+        (_currentBPO?'<span onclick="showBpoModal()" title="Change BPO" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;background:'+bpoBg+';color:'+bpoColor+';border:1px solid '+bpoColor+';font-size:10px;font-weight:800">'+esc(_currentBPO)+'</span>':'<span onclick="showBpoModal()" style="cursor:pointer;padding:3px 10px;border-radius:8px;background:#FEF2F2;color:#EE4D2D;border:1px dashed #EE4D2D;font-size:10px;font-weight:800">Set BPO</span>')+
+        '<span onclick="signOutUser()" title="Sign out" style="cursor:pointer;margin-left:auto;font-size:10px;font-weight:700;color:#6B7280;padding:3px 8px;border-radius:8px;border:1px solid #E5E7EB">Sign out</span>'+
+      '</div>';
   } else {
-    el.onclick=function(){showUsernameModal('');};
-    el.title='Click to sign in';
-    el.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:8px;background:#FEF2F2;color:#EE4D2D;border:1.5px dashed #EE4D2D;font-size:11px">👤 Sign In</span>';
+    el.onclick=function(){ showLoginGate(); };
+    el.style.cursor='pointer';
+    el.title='Sign in';
+    el.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:8px;background:#FEF2F2;color:#EE4D2D;border:1.5px dashed #EE4D2D;font-size:11px">👤 Not signed in</span>';
   }
 }
 
@@ -248,35 +297,39 @@ function saveEditProfile(){
   toast('✅ Profile updated!');
 }
 
-function showUsernameModal(pendingWeek){
+function showBpoModal(){
   const modal = document.getElementById('username-modal');
-  if(modal){ modal.style.display='flex'; modal._pendingWeek=pendingWeek||''; }
-  setTimeout(()=>{
-    const inp=document.getElementById('username-input');
-    if(inp){ inp.value=_currentUsername||''; inp.focus(); }
-    if(_currentBPO) selectBPO(_currentBPO);
-  },50);
+  if(!modal) return;
+  modal.style.display='flex';
+  // Populate avatar + name from Google
+  const av = document.getElementById('bpo-modal-avatar');
+  const title = document.getElementById('bpo-modal-title');
+  const sub = document.getElementById('bpo-modal-sub');
+  if(_authUser){
+    if(av){
+      if(_authUser.photoURL){ av.innerHTML = '<img src="'+_authUser.photoURL+'" style="width:100%;height:100%;object-fit:cover" referrerpolicy="no-referrer">'; }
+      else { av.textContent = (_currentUsername||'U').charAt(0).toUpperCase(); }
+    }
+    if(title) title.textContent = 'Hi, '+(_currentUsername||'there')+'!';
+    if(sub) sub.textContent = 'Select your BPO to continue.';
+  }
+  if(_currentBPO) selectBPO(_currentBPO);
 }
 
-function confirmUsername(){
-  const inp = document.getElementById('username-input');
-  const name = (inp?inp.value:'').trim();
-  if(!name){ inp&&inp.focus(); toast('Please enter your name','error'); return; }
+function confirmBpo(){
   if(!_currentBPO){ toast('Please select your BPO','error'); return; }
-  _currentUsername = name;
-  try{
-    localStorage.setItem('wj_username', name);
-    localStorage.setItem('wj_bpo', _currentBPO);
-  }catch(e){}
+  try{ localStorage.setItem('wj_bpo', _currentBPO); }catch(e){}
+  updateUserBpo();
   updateSidebarUsername();
-  updateVisitUser(name, _currentBPO); // tag the existing visit record with username + BPO
   const modal = document.getElementById('username-modal');
-  const pendingWeek = modal?modal._pendingWeek:null;
   if(modal) modal.style.display='none';
-  toast('👋 Welcome, '+esc(name)+'!');
-  if(pendingWeek) _doStartQuiz(pendingWeek);
-  else render();
+  toast('👋 Welcome, '+esc(_currentUsername)+'!');
+  render();
 }
+
+/* Legacy alias — quiz start no longer needs a name gate since Google provides it */
+function showUsernameModal(){ if(!_currentBPO) showBpoModal(); }
+function confirmUsername(){ confirmBpo(); }
 
 /* ═══ FIREBASE CONFIG — REPLACE WITH YOUR OWN ═══
    Steps:
@@ -298,6 +351,8 @@ const FIREBASE_CONFIG = {
 /* ═══ FIREBASE ENGINE ═══ */
 var _fbReady = false;
 var _fbDB = null;
+var _fbAuth = null;
+var _authUser = null;          // Firebase auth user object (null when signed out)
 var _fbListeners = {}; // active realtime listeners
 
 function fbConfigured(){
@@ -344,33 +399,71 @@ function initFirebase(){
     render();
     return;
   }
-  // Dynamically load Firebase SDK (compat v9)
+  // Dynamically load Firebase SDK (compat v9) — MUST load sequentially
+  // because database & auth depend on app being fully executed first.
   const sdks = [
     'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js'
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'
   ];
-  let loaded = 0;
-  sdks.forEach(src => {
+  function loadSeq(i){
+    if(i >= sdks.length){ onFirebaseLoaded(); return; }
     const s = document.createElement('script');
-    s.src = src;
-    s.onload = () => { loaded++; if(loaded === sdks.length) onFirebaseLoaded(); };
-    s.onerror = () => { console.error('Failed to load Firebase SDK'); render(); };
+    s.src = sdks[i];
+    s.async = false;
+    s.onload = () => loadSeq(i+1);
+    s.onerror = () => {
+      console.error('Failed to load Firebase SDK:', sdks[i]);
+      fbStatus('err');
+      // Can't authenticate without the SDK — let the user in locally so the app isn't bricked
+      hideLoginGate();
+      loadUsername();
+      toast('Could not reach Firebase — running offline. Check your connection.','error');
+      render();
+    };
     document.head.appendChild(s);
-  });
+  }
+  loadSeq(0);
 }
 
 function onFirebaseLoaded(){
+  // Guard: make sure the SDK objects actually exist before using them
+  if(typeof firebase === 'undefined' || !firebase.initializeApp){
+    console.error('Firebase global not available after load');
+    fbStatus('err');
+    hideLoginGate();
+    loadUsername();
+    render();
+    return;
+  }
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     _fbDB = firebase.database();
+    _fbAuth = firebase.auth();
     _fbReady = true;
+    if(typeof _fbTimeout!=='undefined') clearTimeout(_fbTimeout);
     fbStatus('warn');
     loadAllFromFirebase();
-    logVisit();
     subscribeVisits();
+    subscribeFeedback();
+    // Handle redirect-based sign-in result (fallback when popup is blocked)
+    _fbAuth.getRedirectResult().catch(function(e){ if(e && e.code && e.code!=='auth/no-auth-event') console.warn('Redirect result:', e); });
+    // Watch auth state — controls the login gate
+    _fbAuth.onAuthStateChanged(function(user){
+      if(user){
+        _authUser = user;
+        onSignedIn(user);
+      } else {
+        _authUser = null;
+        onSignedOut();
+      }
+    });
   }catch(e){
     console.error('Firebase init error:', e);
     fbStatus('err');
+    hideLoginGate();
+    loadUsername();
+    toast('Firebase connection issue — running offline.','error');
     render();
   }
 }
@@ -378,6 +471,95 @@ function onFirebaseLoaded(){
 function fbPath(view, field){
   return 'wjdashboard/' + view + '/' + field;
 }
+
+/* ═══ GOOGLE AUTHENTICATION ═══ */
+function signInWithGoogle(){
+  if(!_fbAuth){ toast('Still connecting, please wait…','error'); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  const btn = document.getElementById('google-signin-btn');
+  if(btn){ btn.disabled=true; btn.style.opacity='.6'; btn.querySelector('span').textContent='Signing in…'; }
+  _fbAuth.signInWithPopup(provider).catch(function(err){
+    console.error('Sign-in error:', err);
+    if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.querySelector('span').textContent='Sign in with Google'; }
+    if(err.code==='auth/popup-blocked'){
+      // Fallback to redirect if popup is blocked
+      _fbAuth.signInWithRedirect(provider);
+    } else if(err.code!=='auth/popup-closed-by-user' && err.code!=='auth/cancelled-popup-request'){
+      toast('Sign-in failed: '+(err.message||err.code),'error');
+    }
+  });
+}
+
+function signOutUser(){
+  if(!_fbAuth) return;
+  _fbAuth.signOut().then(function(){
+    _currentBPO='';
+    try{ localStorage.removeItem('wj_bpo'); localStorage.removeItem('wj_username'); }catch(e){}
+    toast('Signed out');
+  });
+}
+
+/* Called when a user is authenticated */
+function onSignedIn(user){
+  hideLoginGate();
+  _currentUsername = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+  try{ localStorage.setItem('wj_username', _currentUsername); }catch(e){}
+  // Restore their previously chosen BPO
+  try{ _currentBPO = localStorage.getItem('wj_bpo')||''; }catch(e){}
+  // Save/update the user record in Firebase
+  saveUserRecord(user);
+  // Log the visit now that we know who it is
+  logVisit();
+  // If they haven't picked a BPO yet, prompt for it
+  if(!_currentBPO){
+    setTimeout(function(){ showBpoModal(); }, 200);
+  }
+  updateSidebarUsername();
+  render();
+}
+
+/* Called when signed out — show the gate, block the app */
+function onSignedOut(){
+  _authUser=null;
+  showLoginGate();
+  updateSidebarUsername();
+}
+
+/* Store the user's email/name in Firebase under users/{uid} */
+function saveUserRecord(user){
+  if(!_fbReady || !user) return;
+  const ref = _fbDB.ref('wjdashboard/users/'+user.uid);
+  const now = new Date().toISOString();
+  ref.once('value').then(function(snap){
+    const existing = snap.val();
+    const rec = {
+      uid: user.uid,
+      email: user.email||'',
+      name: user.displayName||'',
+      photo: user.photoURL||'',
+      bpo: _currentBPO||'',
+      lastLogin: now
+    };
+    if(existing && existing.firstLogin){ rec.firstLogin = existing.firstLogin; }
+    else { rec.firstLogin = now; }
+    ref.set(rec).catch(function(e){ console.warn('User record write error:', e); });
+  }).catch(function(e){ console.warn('User record read error:', e); });
+}
+
+/* Update just the BPO on the user record */
+function updateUserBpo(){
+  if(!_fbReady || !_authUser) return;
+  _fbDB.ref('wjdashboard/users/'+_authUser.uid+'/bpo').set(_currentBPO||'').catch(function(){});
+}
+
+function showLoginGate(){
+  const g=document.getElementById('login-gate'); if(g) g.style.display='flex';
+}
+function hideLoginGate(){
+  const g=document.getElementById('login-gate'); if(g) g.style.display='none';
+}
+
 
 /* Load all views from Firebase, then subscribe to live updates */
 function loadAllFromFirebase(){
@@ -449,6 +631,7 @@ function logVisit(){
     hour:     now.getHours(),
     dow:      now.getDay(),
     username: _currentUsername || null,
+    email:    (_authUser && _authUser.email) || null,
     bpo:      _currentBPO      || null,
   };
   _fbDB.ref('wjdashboard/_visits').push(record)
@@ -476,6 +659,47 @@ function subscribeVisits(){
     render();
   }, e => console.warn('Visit subscribe error:',e));
 }
+
+/* ── FEEDBACK ─────────────────────────────────────────────────── */
+function subscribeFeedback(){
+  if(!_fbReady) return;
+  _fbDB.ref('wjdashboard/_feedback').on('value', snap=>{
+    const val = snap.val();
+    // keep the Firebase key so admins can delete individual entries later if needed
+    S._feedback = val ? Object.keys(val).map(k=>({_key:k,...val[k]})) : [];
+    render();
+  }, e => console.warn('Feedback subscribe error:',e));
+}
+
+function submitFeedback(){
+  const ta = document.getElementById('feedback-text');
+  const cat = document.getElementById('feedback-cat');
+  const text = ta ? ta.value.trim() : '';
+  if(!text){ ta&&ta.focus(); toast('Please write your feedback first','error'); return; }
+  const record = {
+    text: text,
+    category: cat ? cat.value : 'General',
+    view: viewNames[S.view]||'',
+    username: _currentUsername || 'Anonymous',
+    email: (_authUser && _authUser.email) || '',
+    bpo: _currentBPO || '',
+    date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+    ts: new Date().toISOString()
+  };
+  if(_fbReady){
+    _fbDB.ref('wjdashboard/_feedback').push(record)
+      .then(()=>{ toast('✅ Thank you for your feedback!'); })
+      .catch(e=>{ console.warn('Feedback write error:',e); toast('Could not send feedback','error'); });
+  } else {
+    // local fallback
+    if(!S._feedback) S._feedback=[];
+    S._feedback.push(record);
+    toast('✅ Feedback saved locally');
+  }
+  if(ta) ta.value='';
+  render();
+}
+// ─────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────
 
 /* Auto-save on every render — only changed view's data */
@@ -556,7 +780,7 @@ function renderNav(){
     {k:'myacks',l:'My Acks',ic:'✅',c:(d.acks||[]).filter(a=>a.username===_currentUsername).length||undefined},
   ];
   $('nav').innerHTML=tabs.map(t=>`<button class="nav-btn ${S.tab===t.k?'active':''}" onclick="switchTab('${t.k}')"><span class="icon">${t.ic}</span><span class="label">${t.l}</span>${t.c!==undefined?`<span class="count">${t.c}</span>`:''}</button>`).join('');
-  $('nav-admin').innerHTML=`<button class="nav-btn ${S.tab==='admin'?'active':''}" onclick="switchTab('admin')"><span class="icon">⚙️</span><span class="label">Admin</span></button>`;
+  $('nav-admin').innerHTML=`<button class="nav-btn ${S.tab==='feedback'?'active':''}" onclick="switchTab('feedback')"><span class="icon">💬</span><span class="label">Have a Feedback?</span></button><button class="nav-btn ${S.tab==='admin'?'active':''}" onclick="switchTab('admin')"><span class="icon">⚙️</span><span class="label">Admin</span></button>`;
 }
 function switchView(v){S.view=v;S.tab='dashboard';render();}
 function switchTab(t){S.tab=t;if(t==='cases')V().sel=null;render();}
@@ -573,6 +797,7 @@ function render(){renderNav();const m=$('main');const st=m.scrollTop;const d=V()
     case 'quiz':m.innerHTML=rQuiz();break;
     case 'scores':m.innerHTML=rScores();break;
     case 'myacks':m.innerHTML=rMyAcks();break;
+    case 'feedback':m.innerHTML=rFeedback();break;
     case 'admin':m.innerHTML=rAdmin();break;
   }
   if(tabChanged){m.scrollTop=0;m.firstElementChild&&m.firstElementChild.classList.add('fadeUp');}
@@ -582,11 +807,11 @@ function render(){renderNav();const m=$('main');const st=m.scrollTop;const d=V()
 
 /* ═══ DASHBOARD ═══ */
 function rDash(){const d=V();const vn=viewNames[S.view];const vc=viewColors[S.view];
-  const aw=uv(d.cases,'week');const lat=aw[aw.length-1]||'';
+  const aw=uv(d.cases,'week');const lat=aw[0]||'';
   const r2=countBy(d.cases,'rcaL2');const r3=countBy(d.cases,'rcaL3');
   const empty=!d.cases.length;
   const qAvg=d.scores.length?Math.round(d.scores.reduce((a,s)=>a+s.pct,0)/d.scores.length)+'%':'—';
-  const last4=groupByWeek(d.cases).reverse().slice(0,4);
+  const last4=groupByWeek(d.cases).slice(0,4);
   return `<div class="pg">
   <h1 style="font-size:28px;font-weight:900;color:${vc};margin-bottom:2px;letter-spacing:-.5px">${vn} — WJ Dashboard ${VER}</h1>
   <p style="font-size:15px;font-weight:600;margin-bottom:16px">Learn from mistakes. Improve every week.</p>
@@ -782,7 +1007,7 @@ function rQuiz(){const d=V();if(!d.quiz.on)return rQuizHome();if(d.quiz.done)ret
 function rQuizHome(){const d=V();const aw=uv(d.cases,'week');
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:4px">🧠 WJ Knowledge Quiz</h1><p style="font-size:14px;color:#6B7280;margin-bottom:24px">Select a week to start.</p>
   <div class="card text-center" style="padding:28px 32px;margin-bottom:20px"><div style="font-size:48px;margin-bottom:12px">🧠</div><h2 style="font-size:20px;font-weight:900;margin-bottom:6px">Ready to test your knowledge?</h2><p style="font-size:14px;color:#6B7280">Select a week below.</p></div>
-  ${[...aw].reverse().map(w=>{const qc=d.customQs.filter(q=>q.week===w).length;const cc=d.cases.filter(c=>c.week===w).length;const done=d.completedWeeks[w];
+  ${aw.map(w=>{const qc=d.customQs.filter(q=>q.week===w).length;const cc=d.cases.filter(c=>c.week===w).length;const done=d.completedWeeks[w];
     return `<div class="card card-hover pointer" style="padding:16px 24px;display:flex;align-items:center;gap:16px;${done?'border-color:#059669':''}" onclick="startQuiz('${esc(w)}')">
       <div style="width:44px;height:44px;border-radius:12px;background:${done?'#ECFDF5':'#FFF5F2'};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${done?'✅':'🧠'}</div>
       <div style="flex:1"><div style="font-size:15px;font-weight:700">${esc(w)}</div><div style="font-size:12px;color:#6B7280;margin-top:2px">${qc} quiz q${qc!==1?'s':''} · ${cc} case${cc!==1?'s':''}</div></div>
@@ -791,7 +1016,8 @@ function rQuizHome(){const d=V();const aw=uv(d.cases,'week');
   ${!aw.length?'<div class="card text-center" style="padding:30px;color:#6B7280">No cases yet. Import data to generate quizzes.</div>':''}
   </div>`;}
 function startQuiz(wf){
-  if(!_currentUsername){ showUsernameModal(wf); return; }
+  if(!_authUser){ showLoginGate(); return; }
+  if(!_currentBPO){ showBpoModal(); return; }
   _doStartQuiz(wf);
 }
 function _doStartQuiz(wf){const d=V();let qs=[];
@@ -915,7 +1141,7 @@ function rMyAcks(){
   const casePct=totalCases?Math.round(caseAcks.length/totalCases*100):0;
   const tipPct=totalTips?Math.round(tipAcks.length/totalTips*100):0;
 
-  if(!_currentUsername) return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">✅ My Acknowledgements</h1><div class="card text-center" style="padding:40px"><div style="font-size:56px;margin-bottom:12px">✅</div><h3 style="font-weight:800;margin-bottom:8px">Sign in first</h3><p style="color:#6B7280;font-size:13px;margin-bottom:16px">Click the Sign In button in the sidebar to set your name.</p><button class="btn-primary" onclick="showEditProfileModal()">👤 Sign In</button></div></div>`;
+  if(!_currentUsername) return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:24px">✅ My Acknowledgements</h1><div class="card text-center" style="padding:40px"><div style="font-size:56px;margin-bottom:12px">✅</div><h3 style="font-weight:800;margin-bottom:8px">Sign in first</h3><p style="color:#6B7280;font-size:13px;margin-bottom:16px">Sign in with Google to track your acknowledgements.</p><button class="btn-primary" onclick="showLoginGate()">👤 Sign In</button></div></div>`;
 
   function findCase(ackId){return d.cases.find(c=>{const k=(c.id&&String(c.id).trim()&&String(c.id).trim()!=='undefined')?String(c.id).trim():[c.week,c.returnReason,c.rcaL1].join('|');return k===ackId;});}
 
@@ -961,10 +1187,46 @@ function rMyAcks(){
   </div>`;
 }
 
+/* ═══ FEEDBACK ═══ */
+function rFeedback(){
+  const all=(S._feedback||[]).slice().sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+  const mine=all.filter(f=>f.email && _authUser && f.email===_authUser.email);
+  const cats=['General','Bug / Error','Feature Request','Content Suggestion','Other'];
+  const catColor=c=>c==='Bug / Error'?['#DC2626','#FEF2F2']:c==='Feature Request'?['#2563EB','#EFF6FF']:c==='Content Suggestion'?['#7C3AED','#F5F3FF']:c==='Other'?['#6B7280','#F3F4F6']:['#059669','#ECFDF5'];
+  return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:4px">💬 Have a Feedback?</h1>
+  <p style="font-size:14px;color:#6B7280;margin-bottom:20px">Share your ideas, report issues, or suggest improvements. We read every message!</p>
+
+  <div class="card" style="padding:24px 26px;margin-bottom:24px">
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <label style="font-size:12px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.5px">Category</label>
+      <select id="feedback-cat" class="inp" style="width:auto;min-width:180px">
+        ${cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+      </select>
+    </div>
+    <textarea id="feedback-text" class="inp" placeholder="Type your feedback here... What's working well? What could be better?" style="width:100%;min-height:130px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.6;box-sizing:border-box"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap">
+      <div style="font-size:12px;color:#9CA3AF">${_authUser?('Submitting as <b style="color:#6B7280">'+esc(_currentUsername)+'</b>'+(_currentBPO?' · '+esc(_currentBPO):'')):'You are not signed in'}</div>
+      <button class="btn-primary" style="padding:12px 28px" onclick="submitFeedback()">Send Feedback →</button>
+    </div>
+  </div>
+
+  ${mine.length?`<h3 style="font-size:15px;font-weight:800;margin-bottom:12px">📨 Your Previous Feedback (${mine.length})</h3>
+  ${mine.map(f=>{const[col,bg]=catColor(f.category);return `<div class="card" style="padding:16px 22px;margin-bottom:10px;border-left:4px solid ${col}">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${bg};color:${col}">${esc(f.category||'General')}</span>
+      <span style="font-size:11px;color:#9CA3AF">${esc(f.date||'')}</span>
+      ${f.view?`<span style="font-size:11px;color:#9CA3AF">· ${esc(f.view)}</span>`:''}
+    </div>
+    <div style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap">${esc(f.text||'')}</div>
+  </div>`;}).join('')}`
+  :`<div class="card text-center" style="padding:32px"><div style="font-size:40px;margin-bottom:10px">💡</div><p style="font-size:13px;color:#6B7280">Your submitted feedback will appear here.</p></div>`}
+  </div>`;
+}
+
 /* ═══ ADMIN ═══ */
 function rAdmin(){const d=V();
-  const tabs=[{k:'changelog',l:'📋 Version Updates'},{k:'userstats',l:'👥 User Stats'},{k:'traffic',l:'📈 Traffic'}];
-  let ct='';switch(d.adminSub||'changelog'){case 'userstats':ct=rAdmUserStats();break;case 'traffic':ct=rAdmTraffic();break;default:ct=rAdmChangelog();}
+  const tabs=[{k:'changelog',l:'📋 Version Updates'},{k:'userstats',l:'👥 User Stats'},{k:'traffic',l:'📈 Traffic'},{k:'feedback',l:'💬 Feedback',c:(S._feedback||[]).length||undefined}];
+  let ct='';switch(d.adminSub||'changelog'){case 'userstats':ct=rAdmUserStats();break;case 'traffic':ct=rAdmTraffic();break;case 'feedback':ct=rAdmFeedback();break;default:ct=rAdmChangelog();}
   return `<div class="pg"><h1 style="font-size:24px;font-weight:900;margin-bottom:2px">⚙️ Admin — ${viewNames[S.view]}</h1><p style="font-size:13px;color:#6B7280;margin-bottom:20px">Statistics and version history. All data is managed via Google Sheets.</p>
   <div class="flex-w mb16">${tabs.map(t=>`<button style="padding:10px 20px;border-radius:10px;border:1.5px solid ${d.adminSub===t.k?'#EE4D2D':'#E5E7EB'};background:${d.adminSub===t.k?'#FFF5F2':'#fff'};color:${d.adminSub===t.k?'#EE4D2D':'#6B7280'};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onclick="V().adminSub='${t.k}';render()">${t.l}${t.c!==undefined?' <span style="opacity:.7">('+t.c+')</span>':''}</button>`).join('')}</div>${ct}</div>`;}
 
@@ -973,6 +1235,30 @@ function rAdmin(){const d=V();
 /* ═══ ADMIN — read-only, data managed via Google Sheets ═══ */
 /* All add/edit/delete functions removed — use Google Sheets + Apps Script trigger */
 
+
+
+function rAdmFeedback(){
+  const all=(S._feedback||[]).slice().sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+  const catColor=c=>c==='Bug / Error'?['#DC2626','#FEF2F2']:c==='Feature Request'?['#2563EB','#EFF6FF']:c==='Content Suggestion'?['#7C3AED','#F5F3FF']:c==='Other'?['#6B7280','#F3F4F6']:['#059669','#ECFDF5'];
+  if(!all.length) return `<div class="card" style="padding:40px;text-align:center"><div style="font-size:48px;margin-bottom:12px">💬</div><h3 style="font-weight:800;margin-bottom:8px">No feedback yet</h3><p style="color:#6B7280;font-size:13px">Feedback submitted by users will appear here.</p></div>`;
+  // Count by category
+  const byCat={};all.forEach(f=>{const c=f.category||'General';byCat[c]=(byCat[c]||0)+1;});
+  return `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+    <div class="card text-center" style="padding:16px 22px;flex:1;min-width:120px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Total</div><div style="font-size:28px;font-weight:900;color:#EE4D2D">${all.length}</div></div>
+    ${Object.entries(byCat).map(([c,n])=>{const[col,bg]=catColor(c);return `<div class="card text-center" style="padding:16px 22px;flex:1;min-width:120px"><div style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;margin-bottom:4px">${esc(c)}</div><div style="font-size:28px;font-weight:900;color:${col}">${n}</div></div>`;}).join('')}
+  </div>
+  ${all.map(f=>{const[col,bg]=catColor(f.category);const bpoCol=f.bpo==='Vads'?'#EE4D2D':f.bpo==='ePerformax'?'#2563EB':f.bpo==='Asia Recruit'?'#059669':'#6B7280';return `<div class="card" style="padding:16px 22px;margin-bottom:10px;border-left:4px solid ${col}">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${bg};color:${col}">${esc(f.category||'General')}</span>
+      <span style="font-size:13px;font-weight:800">${esc(f.username||'Anonymous')}</span>
+      ${f.bpo?`<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:6px;background:${bpoCol};color:#fff">${esc(f.bpo)}</span>`:''}
+      ${f.view?`<span style="font-size:11px;color:#9CA3AF">· ${esc(f.view)}</span>`:''}
+      <span style="font-size:11px;color:#9CA3AF;margin-left:auto">${esc(f.date||'')}</span>
+    </div>
+    ${f.email?`<div style="font-size:11px;color:#9CA3AF;margin-bottom:6px">${esc(f.email)}</div>`:''}
+    <div style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap">${esc(f.text||'')}</div>
+  </div>`;}).join('')}`;
+}
 
 
 function rAdmUserStats(){
@@ -1107,7 +1393,8 @@ function acknowledgeCurrentCase(){
 }
 
 function acknowledge(type, id){
-  if(!_currentUsername){ showUsernameModal(''); toast('Please sign in first','error'); return; }
+  if(!_authUser){ showLoginGate(); return; }
+  if(!_currentBPO){ showBpoModal(); toast('Please select your BPO first','error'); return; }
   const d=V();
   const already = (d.acks||[]).find(a=>a.type===type&&a.id===String(id)&&a.username===_currentUsername);
   if(already){ toast('You already acknowledged this '+type,'error'); return; }
@@ -1444,17 +1731,37 @@ function exportData(target){const d=V();var data,fn;
 
 loadScores();
 loadAcks();
-loadUsername();
-/* Auto-show welcome popup for first-time visitors */
-if(!_currentUsername){
-  setTimeout(function(){ showUsernameModal(''); }, 300);
-}
+/* Show the login gate immediately on load. Auth state listener will hide it
+   once Firebase confirms the user is signed in (persisted sessions auto-restore). */
+showLoginGate();
+/* Safety net: if Firebase hasn't become ready within 12s (CDN blocked, offline,
+   corporate firewall), tell the user instead of leaving them on a dead gate. */
+var _fbTimeout = setTimeout(function(){
+  if(!_fbReady){
+    const btn = document.getElementById('google-signin-btn');
+    const gate = document.getElementById('login-gate');
+    if(gate){
+      let note = document.getElementById('gate-timeout-note');
+      if(!note){
+        note = document.createElement('p');
+        note.id = 'gate-timeout-note';
+        note.style.cssText = 'font-size:12px;color:#DC2626;margin-top:16px;line-height:1.6;font-weight:600';
+        note.innerHTML = '⚠️ Trouble reaching Firebase. Check your internet connection or that your network allows <b>gstatic.com</b>, then refresh the page.';
+        const box = gate.querySelector('div');
+        if(box) box.appendChild(note);
+      }
+    }
+  }
+}, 12000);
 _fileCallbacks['nc-img']=function(d){V()._ncImgData=d;};
 _fileCallbacks['nc-vid']=function(d){V()._ncVidData=d;};
 _fileCallbacks['nt-img']=function(d){V()._ntImgData=d;};
 _fileCallbacks['nt-vid']=function(d){V()._ntVidData=d;};
-/* Init Firebase — loads all shared data, then renders */
+/* Init Firebase — loads all shared data, sets up auth, then renders */
 initFirebase();
+/* If Firebase isn't configured at all, we can't auth — let the user in locally */
+if(!fbConfigured()){ hideLoginGate(); loadUsername(); render(); }
+
 </script>
 </body>
 </html>
