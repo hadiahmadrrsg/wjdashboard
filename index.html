@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v10</title>
+<title>WJ Dashboard v12</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -25,6 +25,7 @@ body{font-family:'Outfit','Segoe UI',sans-serif;min-height:100vh;background:#F5F
 #main{flex:1;padding:28px 36px;overflow-y:auto;max-height:100vh}
 .card{background:#fff;border-radius:16px;border:1px solid #E5E7EB;box-shadow:0 1px 3px rgba(0,0,0,.04);padding:24px;margin-bottom:16px}
 .card-hover{transition:all .2s}.card-hover:hover{border-color:#EE4D2D;box-shadow:0 6px 24px rgba(238,77,45,.1);transform:translateY(-1px)}
+.tf-bar:hover .tf-tip{display:block !important}
 .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
 .btn-primary{padding:10px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,#EE4D2D,#FF6B47);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(238,77,45,.25)}
 .btn-outline{padding:10px 22px;border-radius:10px;border:1.5px solid #EE4D2D;background:#fff;color:#EE4D2D;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -89,8 +90,9 @@ select.inp{cursor:pointer;background:#fff}
 <div id="sidebar">
   <div class="logo-row">
     <div class="logo-icon"><svg width="36" height="36" viewBox="0 0 120 120" fill="none"><rect width="120" height="120" fill="#fff"/><path d="M60 16c-8 0-15 4.5-18.5 11.2h37C75 20.5 68 16 60 16z" fill="#EE4D2D"/><path d="M41 26h-1.5c-.5 0-1 .1-1.4.3A27.5 27.5 0 0032 28v.5l3 56c.3 5 4.5 9 9.5 9h31c5 0 9.2-4 9.5-9l3-56V28a27 27 0 00-6-1.7c-.5-.2-1-.3-1.5-.3H79" fill="#EE4D2D"/><path d="M41.5 27.2a3.2 3.2 0 01-.3-1.3 3 3 0 013-3h.3A19 19 0 0160 13a19 19 0 0115.5 9.9h.3a3 3 0 013 3c0 .5-.1.9-.3 1.3" stroke="#EE4D2D" stroke-width="5" fill="none"/><text x="60" y="72" text-anchor="middle" fill="#fff" font-weight="900" font-size="38" font-family="Arial">S</text></svg></div>
-    <div><div class="logo-title">WJ Dashboard</div><div class="logo-sub">Return and Refund</div><div id="sidebar-username" style="font-size:11px;font-weight:700;margin-top:5px"></div></div>
+    <div><div class="logo-title">WJ Dashboard</div><div class="logo-sub">Return and Refund</div></div>
   </div>
+  <div id="sidebar-username" style="padding:0 6px;margin-bottom:10px"></div>
   <div id="nav-view"></div>
   <div id="nav"></div>
   <div style="flex:1"></div>
@@ -111,10 +113,11 @@ select.inp{cursor:pointer;background:#fff}
     <div style="font-size:36px;margin-bottom:8px">👤</div>
     <h2 style="font-size:18px;font-weight:900;margin-bottom:16px">Edit Profile</h2>
     <input id="edit-name-input" class="inp" placeholder="Your full name..." style="margin-bottom:12px;font-size:15px;text-align:center">
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button id="edit-bpo-vads" onclick="editSelectBPO('Vads')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">Vads</button>
-      <button id="edit-bpo-ep" onclick="editSelectBPO('ePerformax')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">ePerformax</button>
-      <button id="edit-bpo-ar" onclick="editSelectBPO('Asia Recruit')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">Asia Recruit</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      <button id="edit-bpo-vads" onclick="editSelectBPO('Vads')" style="padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">Vads</button>
+      <button id="edit-bpo-ep" onclick="editSelectBPO('ePerformax')" style="padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">ePerformax</button>
+      <button id="edit-bpo-ar" onclick="editSelectBPO('Asia Recruit')" style="padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">Asia Recruit</button>
+      <button id="edit-bpo-ih" onclick="editSelectBPO('In House')" style="padding:10px;border-radius:10px;border:2px solid #E5E7EB;background:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:#6B7280">In House</button>
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn-primary" style="flex:1" onclick="saveEditProfile()">Save</button>
@@ -128,10 +131,11 @@ select.inp{cursor:pointer;background:#fff}
     <h2 style="font-size:22px;font-weight:900;margin-bottom:4px" id="bpo-modal-title">One last step!</h2>
     <p style="font-size:14px;color:#6B7280;margin-bottom:24px" id="bpo-modal-sub">Select your BPO to continue.</p>
     <p style="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Select your BPO</p>
-    <div style="display:flex;gap:10px;margin-bottom:24px">
-      <button id="bpo-vads" onclick="selectBPO('Vads')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Vads</button>
-      <button id="bpo-ep" onclick="selectBPO('ePerformax')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">ePerformax</button>
-      <button id="bpo-ar" onclick="selectBPO('Asia Recruit')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Asia Recruit</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+      <button id="bpo-vads" onclick="selectBPO('Vads')" style="padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Vads</button>
+      <button id="bpo-ep" onclick="selectBPO('ePerformax')" style="padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">ePerformax</button>
+      <button id="bpo-ar" onclick="selectBPO('Asia Recruit')" style="padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">Asia Recruit</button>
+      <button id="bpo-ih" onclick="selectBPO('In House')" style="padding:14px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;color:#6B7280">In House</button>
     </div>
     <button class="btn-primary" style="width:100%;padding:14px;font-size:15px" onclick="confirmBpo()">Continue →</button>
   </div>
@@ -203,7 +207,7 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v10';
+const VER='v12';
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -221,23 +225,23 @@ function updateSidebarUsername(){
   const el = document.getElementById('sidebar-username');
   if(!el) return;
   if(_authUser){
-    const bpoColor = _currentBPO==='Vads'?'#EE4D2D':_currentBPO==='ePerformax'?'#2563EB':_currentBPO==='Asia Recruit'?'#059669':'#6B7280';
-    const bpoBg = _currentBPO==='Vads'?'#FFF5F2':_currentBPO==='ePerformax'?'#EFF6FF':_currentBPO==='Asia Recruit'?'#ECFDF5':'#F3F4F6';
-    const photo = _authUser.photoURL ? '<img src="'+_authUser.photoURL+'" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0" referrerpolicy="no-referrer">' : '<span style="width:26px;height:26px;border-radius:50%;background:'+bpoColor+';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">'+esc((_currentUsername||'U').charAt(0).toUpperCase())+'</span>';
+    const bpoCol = bpoColor(_currentBPO);
+    const bpoBg = bpoBgc(_currentBPO);
+    const photo = _authUser.photoURL ? '<img src="'+_authUser.photoURL+'" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0" referrerpolicy="no-referrer">' : '<span style="width:26px;height:26px;border-radius:50%;background:'+bpoCol+';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">'+esc((_currentUsername||'U').charAt(0).toUpperCase())+'</span>';
     el.onclick=null;
     el.style.cursor='default';
     el.title='';
     el.innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#F9FAFB;border:1px solid #E5E7EB;margin-top:4px">'+
+      '<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:12px;background:#F9FAFB;border:1px solid #E5E7EB">'+
         photo+
-        '<div style="flex:1;min-width:0;text-align:left">'+
-          '<div style="font-size:12px;font-weight:800;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(_currentUsername)+'</div>'+
+        '<div style="flex:1;min-width:0;text-align:left;line-height:1.3">'+
+          '<div style="font-size:12.5px;font-weight:800;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(_currentUsername)+'</div>'+
           '<div style="font-size:10px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(_authUser.email||'')+'</div>'+
         '</div>'+
       '</div>'+
-      '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">'+
-        (_currentBPO?'<span onclick="showBpoModal()" title="Change BPO" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;background:'+bpoBg+';color:'+bpoColor+';border:1px solid '+bpoColor+';font-size:10px;font-weight:800">'+esc(_currentBPO)+'</span>':'<span onclick="showBpoModal()" style="cursor:pointer;padding:3px 10px;border-radius:8px;background:#FEF2F2;color:#EE4D2D;border:1px dashed #EE4D2D;font-size:10px;font-weight:800">Set BPO</span>')+
-        '<span onclick="signOutUser()" title="Sign out" style="cursor:pointer;margin-left:auto;font-size:10px;font-weight:700;color:#6B7280;padding:3px 8px;border-radius:8px;border:1px solid #E5E7EB">Sign out</span>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:7px">'+
+        (_currentBPO?'<span onclick="showBpoModal()" title="Change BPO" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:8px;background:'+bpoBg+';color:'+bpoCol+';border:1px solid '+bpoCol+';font-size:10px;font-weight:800;white-space:nowrap">'+esc(_currentBPO)+'</span>':'<span onclick="showBpoModal()" style="cursor:pointer;padding:4px 11px;border-radius:8px;background:#FEF2F2;color:#EE4D2D;border:1px dashed #EE4D2D;font-size:10px;font-weight:800;white-space:nowrap">Set BPO</span>')+
+        '<span onclick="signOutUser()" title="Sign out" style="cursor:pointer;margin-left:auto;font-size:10px;font-weight:700;color:#6B7280;padding:4px 10px;border-radius:8px;border:1px solid #E5E7EB;white-space:nowrap">Sign out</span>'+
       '</div>';
   } else {
     el.onclick=function(){ showLoginGate(); };
@@ -247,18 +251,21 @@ function updateSidebarUsername(){
   }
 }
 
+/* ═══ BPO CONFIG (single source of truth) ═══ */
+var BPO_LIST = ['Vads','ePerformax','Asia Recruit','In House'];
+function bpoColor(b){ return b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':b==='Asia Recruit'?'#059669':b==='In House'?'#7C3AED':'#6B7280'; }
+function bpoBgc(b){ return b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':b==='Asia Recruit'?'#ECFDF5':b==='In House'?'#F5F3FF':'#F3F4F6'; }
+function bpoBtnId(b){ return b==='Vads'?'bpo-vads':b==='ePerformax'?'bpo-ep':b==='Asia Recruit'?'bpo-ar':'bpo-ih'; }
+
 function selectBPO(bpo){
   _currentBPO = bpo;
-  ['Vads','ePerformax','Asia Recruit'].forEach(b=>{
-    const id = b==='Vads'?'bpo-vads':b==='ePerformax'?'bpo-ep':'bpo-ar';
-    const el=document.getElementById(id);
+  BPO_LIST.forEach(b=>{
+    const el=document.getElementById(bpoBtnId(b));
     if(!el)return;
     const active=bpo===b;
-    const col=b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':'#059669';
-    const bg=b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':'#ECFDF5';
-    el.style.borderColor=active?col:'#E5E7EB';
-    el.style.background=active?bg:'#fff';
-    el.style.color=active?col:'#6B7280';
+    el.style.borderColor=active?bpoColor(b):'#E5E7EB';
+    el.style.background=active?bpoBgc(b):'#fff';
+    el.style.color=active?bpoColor(b):'#6B7280';
   });
 }
 
@@ -274,15 +281,13 @@ function showEditProfileModal(){
 }
 function editSelectBPO(bpo){
   _editBPOTemp = bpo;
-  ['Vads','ePerformax','Asia Recruit'].forEach(b=>{
-    const id='edit-bpo-'+(b==='Vads'?'vads':b==='ePerformax'?'ep':'ar');
+  BPO_LIST.forEach(b=>{
+    const id='edit-bpo-'+(b==='Vads'?'vads':b==='ePerformax'?'ep':b==='Asia Recruit'?'ar':'ih');
     const el=document.getElementById(id); if(!el) return;
     const active=bpo===b;
-    const col=b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':'#059669';
-    const bg=b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':'#ECFDF5';
-    el.style.borderColor=active?col:'#E5E7EB';
-    el.style.background=active?bg:'#fff';
-    el.style.color=active?col:'#6B7280';
+    el.style.borderColor=active?bpoColor(b):'#E5E7EB';
+    el.style.background=active?bpoBgc(b):'#fff';
+    el.style.color=active?bpoColor(b):'#6B7280';
   });
 }
 function saveEditProfile(){
@@ -320,6 +325,7 @@ function confirmBpo(){
   if(!_currentBPO){ toast('Please select your BPO','error'); return; }
   try{ localStorage.setItem('wj_bpo', _currentBPO); }catch(e){}
   updateUserBpo();
+  logVisit(); // patch this session's visit record with the chosen BPO
   updateSidebarUsername();
   const modal = document.getElementById('username-modal');
   if(modal) modal.style.display='none';
@@ -473,6 +479,16 @@ function fbPath(view, field){
 }
 
 /* ═══ GOOGLE AUTHENTICATION ═══ */
+/* Only these email domains may access the dashboard. Edit this list to change access. */
+var ALLOWED_DOMAINS = ['shopee.com','shopeemobile-external.com'];
+function isAllowedEmail(email){
+  if(!email) return false;
+  const at = email.lastIndexOf('@');
+  if(at<0) return false;
+  const domain = email.slice(at+1).toLowerCase();
+  return ALLOWED_DOMAINS.indexOf(domain) !== -1;
+}
+
 function signInWithGoogle(){
   if(!_fbAuth){ toast('Still connecting, please wait…','error'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
@@ -491,6 +507,24 @@ function signInWithGoogle(){
   });
 }
 
+/* Show an "access denied" message on the login gate for wrong-domain accounts */
+function showDomainDenied(email){
+  const gate = document.getElementById('login-gate');
+  if(!gate) return;
+  const box = gate.querySelector('div');
+  if(!box) return;
+  let note = document.getElementById('gate-denied-note');
+  if(!note){
+    note = document.createElement('div');
+    note.id = 'gate-denied-note';
+    note.style.cssText = 'margin-top:18px;padding:14px 16px;border-radius:12px;background:#FEF2F2;border:1.5px solid #FCA5A5;text-align:left';
+    box.appendChild(note);
+  }
+  note.innerHTML =
+    '<div style="font-size:13px;font-weight:800;color:#DC2626;margin-bottom:4px">🚫 Access restricted</div>'+
+    '<div style="font-size:12px;color:#991B1B;line-height:1.6">The account <b>'+esc(email||'')+'</b> is not allowed. Please sign in with your <b>@shopee.com</b> or <b>@shopeemobile-external.com</b> account.</div>';
+}
+
 function signOutUser(){
   if(!_fbAuth) return;
   _fbAuth.signOut().then(function(){
@@ -502,6 +536,22 @@ function signOutUser(){
 
 /* Called when a user is authenticated */
 function onSignedIn(user){
+  // ── DOMAIN GATE ──────────────────────────────────────────
+  // Reject any account whose email isn't on the allow-list.
+  if(!isAllowedEmail(user.email)){
+    const badEmail = user.email || '(no email)';
+    console.warn('Blocked sign-in from disallowed domain:', badEmail);
+    showLoginGate();
+    showDomainDenied(badEmail);
+    // Sign them straight back out so they hold no session
+    if(_fbAuth) _fbAuth.signOut();
+    _authUser = null;
+    return;
+  }
+  // Clear any prior denial message
+  const denied = document.getElementById('gate-denied-note');
+  if(denied) denied.remove();
+  // ─────────────────────────────────────────────────────────
   hideLoginGate();
   _currentUsername = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
   try{ localStorage.setItem('wj_username', _currentUsername); }catch(e){}
@@ -550,7 +600,55 @@ function saveUserRecord(user){
 /* Update just the BPO on the user record */
 function updateUserBpo(){
   if(!_fbReady || !_authUser) return;
-  _fbDB.ref('wjdashboard/users/'+_authUser.uid+'/bpo').set(_currentBPO||'').catch(function(){});
+  const uid   = _authUser.uid;
+  const email = _authUser.email || '';
+  const bpo   = _currentBPO || '';
+
+  // 1) Update the user profile record
+  _fbDB.ref('wjdashboard/users/'+uid+'/bpo').set(bpo).catch(function(){});
+
+  // 2) Retroactively update all PAST VISITS by this email
+  if(email){
+    _fbDB.ref('wjdashboard/_visits').once('value').then(function(snap){
+      const val = snap.val();
+      if(!val) return;
+      const updates = {};
+      Object.keys(val).forEach(function(k){
+        if(val[k] && val[k].email === email && val[k].bpo !== bpo){
+          updates[k+'/bpo'] = bpo;
+        }
+      });
+      if(Object.keys(updates).length){
+        _fbDB.ref('wjdashboard/_visits').update(updates).catch(function(){});
+      }
+    }).catch(function(){});
+
+    // 3) Retroactively update all PAST FEEDBACK by this email
+    _fbDB.ref('wjdashboard/_feedback').once('value').then(function(snap){
+      const val = snap.val();
+      if(!val) return;
+      const updates = {};
+      Object.keys(val).forEach(function(k){
+        if(val[k] && val[k].email === email && val[k].bpo !== bpo){
+          updates[k+'/bpo'] = bpo;
+        }
+      });
+      if(Object.keys(updates).length){
+        _fbDB.ref('wjdashboard/_feedback').update(updates).catch(function(){});
+      }
+    }).catch(function(){});
+  }
+
+  // 4) Retroactively update SCORES and ACKS across all views (matched by username)
+  ['dms','l2rr','p1'].forEach(function(v){
+    let changed = false;
+    (S[v].scores||[]).forEach(function(s){ if(s.username===_currentUsername && s.bpo!==bpo){ s.bpo=bpo; changed=true; } });
+    (S[v].acks||[]).forEach(function(a){ if(a.username===_currentUsername && a.bpo!==bpo){ a.bpo=bpo; changed=true; } });
+    if(changed){
+      saveToFirebase(v,'scores');
+      saveToFirebase(v,'acks');
+    }
+  });
 }
 
 function showLoginGate(){
@@ -623,7 +721,20 @@ function saveToFirebase(viewKey, field){
    Uses sessionStorage to avoid double-counting tab switches.     */
 function logVisit(){
   if(!_fbReady) return;
-  if(sessionStorage.getItem('_wjVisitLogged')) return;
+  // If this session already logged a visit, just patch it with the latest
+  // identity (handles the case where the visit was logged before Google auth
+  // resolved, or before the user picked their BPO).
+  if(sessionStorage.getItem('_wjVisitLogged')){
+    const key = sessionStorage.getItem('_wjVisitKey');
+    if(key){
+      _fbDB.ref('wjdashboard/_visits/' + key).update({
+        username: _currentUsername || null,
+        email:    (_authUser && _authUser.email) || null,
+        bpo:      _currentBPO || null
+      }).catch(e=>console.warn('Visit patch error:',e));
+    }
+    return;
+  }
   const now = new Date();
   const record = {
     ts:       now.toISOString(),
@@ -637,7 +748,7 @@ function logVisit(){
   _fbDB.ref('wjdashboard/_visits').push(record)
     .then(ref=>{
       sessionStorage.setItem('_wjVisitLogged', '1');
-      sessionStorage.setItem('_wjVisitKey', ref.key); // store key so we can patch username later
+      sessionStorage.setItem('_wjVisitKey', ref.key); // store key so we can patch identity later
     })
     .catch(e=>console.warn('Visit log error:',e));
 }
@@ -1247,7 +1358,7 @@ function rAdmFeedback(){
     <div class="card text-center" style="padding:16px 22px;flex:1;min-width:120px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Total</div><div style="font-size:28px;font-weight:900;color:#EE4D2D">${all.length}</div></div>
     ${Object.entries(byCat).map(([c,n])=>{const[col,bg]=catColor(c);return `<div class="card text-center" style="padding:16px 22px;flex:1;min-width:120px"><div style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;margin-bottom:4px">${esc(c)}</div><div style="font-size:28px;font-weight:900;color:${col}">${n}</div></div>`;}).join('')}
   </div>
-  ${all.map(f=>{const[col,bg]=catColor(f.category);const bpoCol=f.bpo==='Vads'?'#EE4D2D':f.bpo==='ePerformax'?'#2563EB':f.bpo==='Asia Recruit'?'#059669':'#6B7280';return `<div class="card" style="padding:16px 22px;margin-bottom:10px;border-left:4px solid ${col}">
+  ${all.map(f=>{const[col,bg]=catColor(f.category);const bpoCol=bpoColor(f.bpo);return `<div class="card" style="padding:16px 22px;margin-bottom:10px;border-left:4px solid ${col}">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${bg};color:${col}">${esc(f.category||'General')}</span>
       <span style="font-size:13px;font-weight:800">${esc(f.username||'Anonymous')}</span>
@@ -1306,8 +1417,8 @@ function rAdmUserStats(){
   const ackByUser={};
   allAcks.forEach(a=>{ const u=a.username||'?'; if(!ackByUser[u]) ackByUser[u]={cases:0,tips:0}; if(a.type==='case') ackByUser[u].cases++; else if(a.type==='tip') ackByUser[u].tips++; });
 
-  const bpoColor=b=>b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':b==='Asia Recruit'?'#059669':'#6B7280';
-  const bpoBg=b=>b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':b==='Asia Recruit'?'#ECFDF5':'#F3F4F6';
+  const bpoColor=b=>b==='Vads'?'#EE4D2D':b==='ePerformax'?'#2563EB':b==='Asia Recruit'?'#059669':b==='In House'?'#7C3AED':'#6B7280';
+  const bpoBg=b=>b==='Vads'?'#FFF5F2':b==='ePerformax'?'#EFF6FF':b==='Asia Recruit'?'#ECFDF5':b==='In House'?'#F5F3FF':'#F3F4F6';
   const scoreColor=p=>p>=80?'#059669':p>=50?'#D97706':'#DC2626';
   const scoreBg=p=>p>=80?'#ECFDF5':p>=50?'#FFFBEB':'#FEF2F2';
 
@@ -1376,7 +1487,7 @@ function rAdmUserStats(){
       </tr></thead>
       <tbody>${allAcks.slice().reverse().map((a,i)=>`<tr style="border-bottom:1px solid #F3F4F6;background:${i%2?'#FAFAFA':'#fff'}">
         <td style="padding:9px 12px;font-weight:700">${esc(a.username||'?')}</td>
-        <td style="padding:9px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${a.bpo==='Vads'?'#FFF5F2':a.bpo==='ePerformax'?'#EFF6FF':a.bpo==='Asia Recruit'?'#ECFDF5':'#F3F4F6'};color:${a.bpo==='Vads'?'#EE4D2D':a.bpo==='ePerformax'?'#2563EB':a.bpo==='Asia Recruit'?'#059669':'#6B7280'}">${esc(a.bpo||'—')}</span></td>
+        <td style="padding:9px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${bpoBgc(a.bpo)};color:${bpoColor(a.bpo)}">${esc(a.bpo||'—')}</span></td>
         <td style="padding:9px 12px;text-align:center"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${a.type==='case'?'#FFF5F2':'#EFF6FF'};color:${a.type==='case'?'#EE4D2D':'#2563EB'}">${a.type==='case'?'📋 Case':'💡 Tip'}</span></td>
         <td style="padding:9px 12px;font-size:12px">${esc(a.view||'')}</td>
         <td style="padding:9px 12px;font-size:12px;color:#6B7280">${esc(a.date||'')}</td>
@@ -1439,9 +1550,24 @@ function rAdmTraffic(){
     days14.push(d.toISOString().slice(0,10));
   }
 
-  // Count per day
+  // Count per day + track who visited each day (unique names, with visit counts)
   const byDay = {};
-  visits.forEach(v=>{ byDay[v.day] = (byDay[v.day]||0)+1; });
+  const namesByDay = {}; // day -> { name: count }
+  visits.forEach(v=>{
+    byDay[v.day] = (byDay[v.day]||0)+1;
+    const nm = v.username || '(anonymous)';
+    if(!namesByDay[v.day]) namesByDay[v.day] = {};
+    namesByDay[v.day][nm] = (namesByDay[v.day][nm]||0)+1;
+  });
+  // Build a readable name list for a given day (for hover tooltips)
+  function dayNames(d){
+    const m = namesByDay[d];
+    if(!m) return '';
+    return Object.entries(m)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([nm,c])=>c>1?nm+' ('+c+')':nm)
+      .join(', ');
+  }
 
   // Count per hour (all-time)
   const byHour = Array(24).fill(0);
@@ -1469,7 +1595,13 @@ function rAdmTraffic(){
       const label = new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
       const barColor = isToday ? '#EE4D2D' : '#2563EB';
       const barBg    = isToday ? '#FFF5F2' : '#EFF6FF';
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
+      const names    = dayNames(d);
+      const fullLabel= new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+      const tipInner = cnt
+        ? `<div style="font-weight:800;margin-bottom:4px;color:#fff">${fullLabel} · ${cnt} visit${cnt!==1?'s':''}</div><div style="color:#D1D5DB;line-height:1.5">${esc(names)}</div>`
+        : `<div style="font-weight:700;color:#fff">${fullLabel}</div><div style="color:#9CA3AF">No visits</div>`;
+      return `<div class="tf-bar" style="position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0;cursor:${cnt?'pointer':'default'}">
+        <div class="tf-tip" style="display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#111827;border-radius:8px;padding:8px 12px;font-size:11px;min-width:140px;max-width:240px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.25);white-space:normal;text-align:left;pointer-events:none">${tipInner}<div style="position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#111827"></div></div>
         <div style="font-size:11px;font-weight:800;color:${cnt?barColor:'#D1D5DB'}">${cnt||''}</div>
         <div style="width:100%;display:flex;align-items:flex-end;height:80px">
           <div style="width:100%;height:${Math.max(pct,cnt?4:0)}%;background:${cnt?barColor:barBg};border-radius:4px 4px 0 0;transition:height .3s;min-height:${cnt?4:0}px"></div>
@@ -1516,8 +1648,10 @@ function rAdmTraffic(){
   const byUser = {};
   allVisits.forEach(v=>{
     const u = v.username || '(anonymous)';
-    if(!byUser[u]) byUser[u]={ username:u, bpo:v.bpo||'—', total:0, today:0, lastSeen:'' };
+    if(!byUser[u]) byUser[u]={ username:u, email:v.email||'', bpo:v.bpo||'—', total:0, today:0, lastSeen:'' };
     byUser[u].total++;
+    if(v.email && !byUser[u].email) byUser[u].email=v.email;
+    if(v.bpo && (byUser[u].bpo==='—'||!byUser[u].bpo)) byUser[u].bpo=v.bpo;
     if(v.day===todayStr) byUser[u].today++;
     if(!byUser[u].lastSeen||v.ts>byUser[u].lastSeen) byUser[u].lastSeen=v.ts;
   });
@@ -1581,19 +1715,21 @@ function rAdmTraffic(){
     ${userRows.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="border-bottom:2px solid #E5E7EB">
         <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">User</th>
+        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Email</th>
         <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">BPO</th>
         <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Total</th>
         <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Today</th>
         <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Last Seen</th>
       </tr></thead>
       <tbody>${userRows.map((u,i)=>{
-        const bpoColor=u.bpo==='Vads'?'#EE4D2D':u.bpo==='ePerformax'?'#2563EB':u.bpo==='Asia Recruit'?'#059669':'#6B7280';
-        const bpoBg=u.bpo==='Vads'?'#FFF5F2':u.bpo==='ePerformax'?'#EFF6FF':u.bpo==='Asia Recruit'?'#ECFDF5':'#F3F4F6';
+        const bpoCol=bpoColor(u.bpo);
+        const bpoBg=bpoBgc(u.bpo);
         const lastSeen = u.lastSeen ? new Date(u.lastSeen).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
         const isExcluded = S._trafficExclude === u.username;
         return '<tr style="border-bottom:1px solid #F3F4F6;background:'+(isExcluded?'#FFFBEB':i%2?'#FAFAFA':'#fff')+'">'
           +'<td style="padding:9px 12px;font-weight:700;color:'+(u.username==='(anonymous)'?'#9CA3AF':'#111827')+'">'+esc(u.username)+'</td>'
-          +'<td style="padding:9px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:'+bpoBg+';color:'+bpoColor+'">'+esc(u.bpo)+'</span></td>'
+          +'<td style="padding:9px 12px;font-size:12px;color:#6B7280">'+esc(u.email||'—')+'</td>'
+          +'<td style="padding:9px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:'+bpoBg+';color:'+bpoCol+'">'+esc(u.bpo)+'</span></td>'
           +'<td style="padding:9px 12px;text-align:center;font-weight:900;color:#2563EB">'+u.total+'</td>'
           +'<td style="padding:9px 12px;text-align:center;font-weight:700;color:'+(u.today?'#EE4D2D':'#9CA3AF')+'">'+u.today+'</td>'
           +'<td style="padding:9px 12px;font-size:12px;color:#6B7280">'+lastSeen+'</td>'
