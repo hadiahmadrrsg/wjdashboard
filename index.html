@@ -360,6 +360,7 @@ var _fbDB = null;
 var _fbAuth = null;
 var _authUser = null;          // Firebase auth user object (null when signed out)
 var _fbListeners = {}; // active realtime listeners
+var _dataLoaded = false;       // guard: load shared data only once after first sign-in
 
 function fbConfigured(){
   return FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('PASTE_YOUR');
@@ -449,9 +450,8 @@ function onFirebaseLoaded(){
     _fbReady = true;
     if(typeof _fbTimeout!=='undefined') clearTimeout(_fbTimeout);
     fbStatus('warn');
-    loadAllFromFirebase();
-    subscribeVisits();
-    subscribeFeedback();
+    // NOTE: Do NOT load data here. With auth-restricted database rules, reads only
+    // succeed once the user is signed in. Data loading happens inside onSignedIn().
     // Handle redirect-based sign-in result (fallback when popup is blocked)
     _fbAuth.getRedirectResult().catch(function(e){ if(e && e.code && e.code!=='auth/no-auth-event') console.warn('Redirect result:', e); });
     // Watch auth state — controls the login gate
@@ -557,6 +557,14 @@ function onSignedIn(user){
   try{ localStorage.setItem('wj_username', _currentUsername); }catch(e){}
   // Restore their previously chosen BPO
   try{ _currentBPO = localStorage.getItem('wj_bpo')||''; }catch(e){}
+  // Load all shared data now that we're authenticated (rules require auth to read).
+  // Guard so it only runs once per page load, not on every token refresh.
+  if(!_dataLoaded){
+    _dataLoaded = true;
+    loadAllFromFirebase();
+    subscribeVisits();
+    subscribeFeedback();
+  }
   // Save/update the user record in Firebase
   saveUserRecord(user);
   // Log the visit now that we know who it is
@@ -1742,7 +1750,34 @@ function rAdmTraffic(){
 
 function rAdmChangelog(){
   const versions=[
-    {v:'v5',label:'Version 5',date:'Jun 2026',bundle:'B6',current:true,updates:[
+    {v:'v12',label:'Version 12',date:'Jul 2026',bundle:'B7',current:true,updates:[
+      {cat:'🔒 Security',text:'Domain-restricted access — only @shopee.com and @shopeemobile-external.com accounts can sign in; others are rejected with a clear message'},
+      {cat:'🐛 Bug Fix',text:'Fixed blank dashboard for signed-in users — data now loads AFTER authentication (required by auth-restricted database rules) instead of before'},
+    ]},
+    {v:'v11',label:'Version 11',date:'Jul 2026',bundle:'B7',current:false,updates:[
+      {cat:'💬 Feature',text:'"Have a Feedback?" tab added above Admin — users submit categorized feedback (Bug, Feature Request, Content, etc.), synced to Firebase'},
+      {cat:'💬 Admin',text:'Feedback sub-tab in Admin panel showing all submissions with category counts and submitter details'},
+      {cat:'📅 UI',text:'Week ordering now shows latest week first everywhere (natural numeric sort — Week 10 before Week 9), Unassigned last'},
+      {cat:'👥 Traffic',text:'Hover any day in the 14-day chart to see the list of who visited; added Email column to the per-user table'},
+      {cat:'👤 Feature',text:'"In House" added as a 4th BPO option (purple); changing your BPO now retroactively updates all your past visits, feedback, scores, and acknowledgements'},
+      {cat:'🐛 Bug Fix',text:'Google display name now correctly captured in Traffic — visit records are patched with your identity after sign-in'},
+      {cat:'🔄 Sync',text:'Firebase SDK now loads sequentially with error recovery and a 12-second timeout message if it can\'t connect'},
+    ]},
+    {v:'v10',label:'Version 10',date:'Jul 2026',bundle:'B7',current:false,updates:[
+      {cat:'🔐 Feature',text:'Google Sign-In — full-screen login gate requires authentication before the dashboard loads'},
+      {cat:'👤 Feature',text:'Captures name, email, and photo automatically from Google; user records saved to Firebase under users/{uid}'},
+      {cat:'👤 UI',text:'Sidebar shows Google profile (photo, name, email) with BPO badge and Sign out button; one-time BPO picker after first sign-in'},
+    ]},
+    {v:'v8–v9',label:'Version 8–9',date:'Jul 2026',bundle:'B6',current:false,updates:[
+      {cat:'✅ Feature',text:'"My Acks" tab — personal view of acknowledged cases and tips with progress bars and quick links'},
+      {cat:'✅ Bug Fix',text:'Acknowledgements now persist reliably (localStorage backup + immediate save); fixed key mismatch that lost acks on refresh'},
+      {cat:'👤 Feature',text:'Welcome popup on first visit; always-visible Sign In button in the sidebar'},
+    ]},
+    {v:'v6–v7',label:'Version 6–7',date:'Jul 2026',bundle:'B6',current:false,updates:[
+      {cat:'✅ Feature',text:'"Acknowledged" badge appears on case cards after clicking "I\'ve Read & Understood This" — shown at the bottom of each card for easy scanning'},
+      {cat:'✅ UI',text:'Green-outlined acknowledged indicator on both WJ Cases and Markdown Cases'},
+    ]},
+    {v:'v5',label:'Version 5',date:'Jun 2026',bundle:'B6',current:false,updates:[
       {cat:'📄 Feature',text:'Markdown sub-tab added under L2RR — separate dataset (MD Cases) with own filters, copyable per-week and full-document markdown output'},
       {cat:'📊 Dashboard',text:'Total MD stat card added to L2RR Home — shows count of Markdown cases beside Total WJ'},
       {cat:'🔗 Admin',text:'Masterfile link added to Admin → User Stats — direct access to WJ Dashboard Google Sheets masterfile'},
@@ -1797,6 +1832,8 @@ function rAdmChangelog(){
       {cat:'📝 Feature',text:'Quiz score history with expandable answer review'},
     ]},
   ];
+  // Current version label derived from the VER constant so it never goes stale
+  const currentNum = (VER||'').replace(/[^0-9]/g,'') || '?';
 
   const catColor=cat=>{
     if(cat.startsWith('🐛')) return ['#FEF2F2','#DC2626'];
@@ -1813,7 +1850,7 @@ function rAdmChangelog(){
       <div><h2 style="font-size:20px;font-weight:900;margin-bottom:4px">📋 Version Updates</h2>
       <p style="font-size:13px;color:#6B7280">Full history of WJ Dashboard changes — bundled every 5 internal versions.</p></div>
       <div style="text-align:right"><div style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Current</div>
-      <div style="font-size:22px;font-weight:900;color:#EE4D2D">Version 5</div></div>
+      <div style="font-size:22px;font-weight:900;color:#EE4D2D">Version ${currentNum}</div></div>
     </div>
     ${versions.map(ver=>`
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;${ver.current?'border:2px solid #EE4D2D':''}">
