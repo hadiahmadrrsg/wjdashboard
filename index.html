@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WJ Dashboard v12</title>
+<title>WJ Dashboard v13</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -207,7 +207,7 @@ function badge(text,color,bg){return `<span class="badge" style="color:${color};
 function dd(id,value,options,ph,onchange){return `<select class="inp" style="width:auto;min-width:130px" id="${id}" onchange="${onchange}"><option value="All">${ph||'All'}</option>${options.filter(o=>o!=='All').map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
 function weekBtn(w,fn){return `<div style="margin-left:auto"><button style="padding:4px 12px;border-radius:6px;border:1px solid #EE4D2D;background:#FFF5F2;color:#EE4D2D;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="${fn}">+ Add to ${esc(w)}</button></div>`;}
 
-const VER='v12';
+const VER='v13';
 
 /* ═══ USERNAME + BPO ═══ */
 var _currentUsername = '';
@@ -1570,11 +1570,17 @@ function hasAcked(type, id){
 /* ═══ TRAFFIC TAB ═══ */
 function rAdmTraffic(){
   const allVisits = S._visits || [];
-  // Include filter — show ONLY the selected user; empty = show everyone. Stored on the view-agnostic S object
-  if(!S._trafficFilter) S._trafficFilter = '';
-  const visits = S._trafficFilter
-    ? allVisits.filter(v => (v.username||'(anonymous)') === S._trafficFilter)
-    : allVisits;
+  // Filters (stored on the view-agnostic S object). Empty string = no filter.
+  if(!S._trafficFilter) S._trafficFilter = '';        // include ONLY this user
+  if(!S._trafficBpo)    S._trafficBpo    = '';        // include ONLY this BPO
+  if(!S._trafficSort)   S._trafficSort   = 'total-desc'; // per-user table sort
+  const visits = allVisits.filter(v=>{
+    const nm = v.username || '(anonymous)';
+    const bp = v.bpo || '—';
+    if(S._trafficFilter && nm !== S._trafficFilter) return false;
+    if(S._trafficBpo && bp !== S._trafficBpo) return false;
+    return true;
+  });
 
   /* ── date helpers ─────────────────────────────────────── */
   const todayStr  = new Date().toISOString().slice(0,10);
@@ -1682,9 +1688,43 @@ function rAdmTraffic(){
     return `<div style="display:flex;gap:8px;align-items:flex-end;height:80px">${bars}</div>`;
   }
 
-  /* ── per-user table ──────────────────────────────────────── */
+  /* ── BPO podium — total visits by BPO (all-time, ignores filters) ── */
+  const bpoTotals = {};
+  allVisits.forEach(v=>{ const b=v.bpo||'—'; bpoTotals[b]=(bpoTotals[b]||0)+1; });
+  const bpoRank = Object.entries(bpoTotals).map(([bpo,tot])=>({bpo,tot})).sort((a,b)=>b.tot-a.tot);
+
+  function podium(){
+    if(!bpoRank.length) return `<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px">No BPO visit data yet.</div>`;
+    const top3 = bpoRank.slice(0,3);
+    // classic podium arrangement: 2nd on the left, 1st (tallest) centre, 3rd on the right
+    const order = top3.length===1?[0]:top3.length===2?[1,0]:[1,0,2];
+    const heights={0:112,1:82,2:58}, medals={0:'🥇',1:'🥈',2:'🥉'};
+    const stands = order.map(idx=>{
+      const r=top3[idx], col=bpoColor(r.bpo);
+      return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;min-width:0">
+        <div style="font-size:24px;line-height:1">${medals[idx]}</div>
+        <div style="font-size:12px;font-weight:800;color:#111827;margin:4px 0 2px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.bpo)}</div>
+        <div style="font-size:20px;font-weight:900;color:${col};line-height:1;margin-bottom:6px">${r.tot}</div>
+        <div style="width:100%;height:${heights[idx]}px;background:linear-gradient(180deg,${col},${col}bb);border-radius:10px 10px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;box-shadow:0 4px 14px ${col}33">
+          <span style="font-size:16px;font-weight:900;color:#fff;opacity:.9">${idx+1}</span>
+        </div>
+      </div>`;
+    }).join('');
+    const rest = bpoRank.slice(3).map((r,i)=>{
+      const col=bpoColor(r.bpo), bg=bpoBgc(r.bpo);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:8px;background:#F9FAFB;margin-top:6px">
+        <span style="font-weight:900;color:#9CA3AF;width:20px">${i+4}</span>
+        <span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:${bg};color:${col}">${esc(r.bpo)}</span>
+        <span style="flex:1"></span>
+        <span style="font-weight:900;color:${col}">${r.tot}</span>
+      </div>`;
+    }).join('');
+    return `<div style="display:flex;align-items:flex-end;gap:12px;padding:8px 8px 0;min-height:150px">${stands}</div>${rest}`;
+  }
+
+  /* ── per-user table (respects the active user + BPO filters) ── */
   const byUser = {};
-  allVisits.forEach(v=>{
+  visits.forEach(v=>{
     const u = v.username || '(anonymous)';
     if(!byUser[u]) byUser[u]={ username:u, email:v.email||'', bpo:v.bpo||'—', total:0, today:0, lastSeen:'' };
     byUser[u].total++;
@@ -1693,23 +1733,60 @@ function rAdmTraffic(){
     if(v.day===todayStr) byUser[u].today++;
     if(!byUser[u].lastSeen||v.ts>byUser[u].lastSeen) byUser[u].lastSeen=v.ts;
   });
-  const userRows = Object.values(byUser).sort((a,b)=>b.total-a.total);
+  // sort per S._trafficSort  (key-dir, e.g. "total-desc")
+  const [sortKey,sortDir]=S._trafficSort.split('-');
+  const sortMul = sortDir==='asc'?1:-1;
+  const userRows = Object.values(byUser).sort((a,b)=>{
+    let r=0;
+    if(sortKey==='today')      r=a.today-b.today;
+    else if(sortKey==='user')  r=a.username.localeCompare(b.username);
+    else if(sortKey==='bpo')   r=String(a.bpo).localeCompare(String(b.bpo));
+    else if(sortKey==='seen')  r=String(a.lastSeen||'').localeCompare(String(b.lastSeen||''));
+    else                       r=a.total-b.total;   // default: total
+    if(r===0) r=a.total-b.total;                     // stable tiebreak
+    return r*sortMul;
+  });
 
-  const knownUsers = ['All',...userRows.map(u=>u.username)];
-  const filterDD = `<select class="inp" style="width:auto;min-width:160px" onchange="S._trafficFilter=this.value==='All'?'':this.value;render()">
-    ${knownUsers.map(u=>`<option value="${esc(u)}" ${(S._trafficFilter||'All')===u?'selected':''}>${esc(u==='All'?'Show everyone':u)}</option>`).join('')}
+  // clickable sortable header cell — toggles asc/desc, shows ▲/▼
+  function th(label,key,align){
+    const active=sortKey===key;
+    const arrow=active?(sortDir==='asc'?' ▲':' ▼'):'';
+    const nextDir=(active&&sortDir==='desc')?'asc':'desc';
+    return '<th onclick="S._trafficSort=\''+key+'-'+nextDir+'\';render()" title="Click to sort" style="cursor:pointer;user-select:none;white-space:nowrap;text-align:'+align+';padding:8px 12px;font-size:11px;font-weight:800;color:'+(active?'#2563EB':'#6B7280')+';text-transform:uppercase">'+label+arrow+'</th>';
+  }
+
+  /* ── filter dropdowns (options always list everyone/every BPO) ── */
+  const allUserNames = Object.keys(allVisits.reduce((m,v)=>{m[v.username||'(anonymous)']=1;return m;},{}));
+  const knownUsers = ['All',...allUserNames];
+  const filterDD = `<select class="inp" style="width:auto;min-width:150px" onchange="S._trafficFilter=this.value==='All'?'':this.value;render()">
+    ${knownUsers.map(u=>`<option value="${esc(u)}" ${(S._trafficFilter||'All')===u?'selected':''}>${esc(u==='All'?'All users':u)}</option>`).join('')}
   </select>`;
 
-  const filterNote = S._trafficFilter
-    ? `<div class="notif" style="background:#EFF6FF;border:1px solid rgba(37,99,235,.2);margin-bottom:12px"><span style="font-size:16px">🔍</span><span style="font-size:13px;color:#1E40AF;font-weight:600">Showing only <b>${esc(S._trafficFilter)}</b> in all charts and counts.</span></div>`
+  const bpoOpts=['All',...BPO_LIST];
+  Object.keys(bpoTotals).forEach(b=>{ if(!bpoOpts.includes(b)) bpoOpts.push(b); }); // include stray/legacy BPO values (e.g. '—')
+  const bpoDD = `<select class="inp" style="width:auto;min-width:150px" onchange="S._trafficBpo=this.value==='All'?'':this.value;render()">
+    ${bpoOpts.map(b=>`<option value="${esc(b)}" ${(S._trafficBpo||'All')===b?'selected':''}>${esc(b==='All'?'All BPOs':b)}</option>`).join('')}
+  </select>`;
+
+  const sortOpts=[['total-desc','Total ↓ (most first)'],['total-asc','Total ↑ (least first)'],['today-desc','Today ↓'],['seen-desc','Last seen (newest)'],['seen-asc','Last seen (oldest)'],['user-asc','User A→Z'],['user-desc','User Z→A'],['bpo-asc','BPO A→Z']];
+  const sortDD = `<select class="inp" style="width:auto;min-width:180px" onchange="S._trafficSort=this.value;render()">
+    ${sortOpts.map(([val,lab])=>`<option value="${val}" ${S._trafficSort===val?'selected':''}>${lab}</option>`).join('')}
+  </select>`;
+
+  const activeBits=[];
+  if(S._trafficFilter) activeBits.push('user <b>'+esc(S._trafficFilter)+'</b>');
+  if(S._trafficBpo)    activeBits.push('BPO <b>'+esc(S._trafficBpo)+'</b>');
+  const filterNote = activeBits.length
+    ? `<div class="notif" style="background:#EFF6FF;border:1px solid rgba(37,99,235,.2);margin-bottom:12px"><span style="font-size:16px">🔍</span><span style="font-size:13px;color:#1E40AF;font-weight:600">Showing only ${activeBits.join(' · ')} in all charts and counts.</span></div>`
     : '';
 
   return `<div>
   <!-- Filter bar -->
   <div class="card" style="padding:14px 20px;margin-bottom:12px">
     <div class="filter-row">
-      <span class="filter-label">Show user:</span>${filterDD}
-      <span style="font-size:12px;color:#6B7280;margin-left:4px">Pick a name to see only that person's visits. Choose "Show everyone" to clear.</span>
+      <span class="filter-label">User:</span>${filterDD}
+      <span class="filter-label" style="margin-left:8px">BPO:</span>${bpoDD}
+      <span style="font-size:12px;color:#6B7280;margin-left:8px">Filters apply to the stats and every chart below. Choose "All" to clear.</span>
     </div>
   </div>
   ${filterNote}
@@ -1747,17 +1824,29 @@ function rAdmTraffic(){
     </div>
   </div>
 
+  <!-- BPO podium — total visits -->
+  <div class="card" style="padding:20px;margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="font-size:15px;font-weight:800;margin:0">🏆 BPO Podium — Total Visits</h3>
+      <span style="font-size:11px;color:#6B7280;font-weight:600">all-time · all BPOs</span>
+    </div>
+    ${podium()}
+  </div>
+
   <!-- Per-user breakdown -->
   <div class="card" style="padding:20px;margin-top:16px">
-    <h3 style="font-size:15px;font-weight:800;margin-bottom:14px">👤 Visits by User</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <h3 style="font-size:15px;font-weight:800;margin:0">👤 Visits by User</h3>
+      <div class="flex-c"><span class="filter-label">Sort:</span>${sortDD}</div>
+    </div>
     ${userRows.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="border-bottom:2px solid #E5E7EB">
-        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">User</th>
+        ${th('User','user','left')}
         <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Email</th>
-        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">BPO</th>
-        <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Total</th>
-        <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Today</th>
-        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">Last Seen</th>
+        ${th('BPO','bpo','left')}
+        ${th('Total','total','center')}
+        ${th('Today','today','center')}
+        ${th('Last Seen','seen','left')}
       </tr></thead>
       <tbody>${userRows.map((u,i)=>{
         const bpoCol=bpoColor(u.bpo);
@@ -1773,14 +1862,19 @@ function rAdmTraffic(){
           +'<td style="padding:9px 12px;font-size:12px;color:#6B7280">'+lastSeen+'</td>'
           +'</tr>';
       }).join('')}</tbody>
-    </table></div>`:`<p style="text-align:center;color:#9CA3AF;font-size:13px;padding:20px 0">No visits logged yet.</p>`}
+    </table></div>`:`<p style="text-align:center;color:#9CA3AF;font-size:13px;padding:20px 0">${(S._trafficFilter||S._trafficBpo)?'No visits match the current filter.':'No visits logged yet.'}</p>`}
   </div>
   </div>`;
 }
 
 function rAdmChangelog(){
   const versions=[
-    {v:'v12',label:'Version 12',date:'Jul 2026',bundle:'B7',current:true,updates:[
+    {v:'v13',label:'Version 13',date:'Aug 2026',bundle:'B7',current:true,updates:[
+      {cat:'📈 Traffic',text:'Traffic tab now filters by name (shows only the selected user) instead of excluding them; added a BPO filter so you can scope every stat and chart to one BPO'},
+      {cat:'🏆 Traffic',text:'New "BPO Podium — Total Visits" leaderboard ranks all BPOs by all-time visits, with a 1st/2nd/3rd podium and a list for the rest'},
+      {cat:'🔀 Traffic',text:'"Visits by User" table is now sortable — a Sort dropdown plus clickable column headers (User, BPO, Total, Today, Last Seen) with ▲/▼ direction indicators'},
+    ]},
+    {v:'v12',label:'Version 12',date:'Jul 2026',bundle:'B7',current:false,updates:[
       {cat:'🔒 Security',text:'Domain-restricted access — only @shopee.com and @shopeemobile-external.com accounts can sign in; others are rejected with a clear message'},
       {cat:'🐛 Bug Fix',text:'Fixed blank dashboard for signed-in users — data now loads AFTER authentication (required by auth-restricted database rules) instead of before'},
     ]},
