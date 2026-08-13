@@ -712,19 +712,8 @@ function subscribeAll(){
       const ref = _fbDB.ref(fbPath(v, f));
       _fbListeners[key] = ref.on('value', snap => {
         const val = snap.val();
-        if(f === 'reminder'){
-          const v5=Array.isArray(val)?val:(val?[val]:[]);while(v5.length<5)v5.push('');S[v].reminder=v5;
-        } else {
-          const incoming = val ? (Array.isArray(val) ? val : Object.values(val)) : [];
-          // SAFETY: don't let a transient empty/null update blank out data we
-          // already have loaded. Only replace with an empty list if we didn't
-          // have anything before either. (Real deletions still clear on reload.)
-          if(incoming.length === 0 && (S[v][f] && S[v][f].length > 0)){
-            // ignore the empty update — keep existing data
-          } else {
-            S[v][f] = incoming;
-          }
-        }
+        if(f === 'reminder'){ const v5=Array.isArray(val)?val:(val?[val]:[]);while(v5.length<5)v5.push('');S[v].reminder=v5; }
+        else { S[v][f] = val ? (Array.isArray(val) ? val : Object.values(val)) : []; }
         if(f === 'acks') loadAcks();
         render();
       });
@@ -1581,10 +1570,10 @@ function hasAcked(type, id){
 /* ═══ TRAFFIC TAB ═══ */
 function rAdmTraffic(){
   const allVisits = S._visits || [];
-  // Exclude filter — stored on the view-agnostic S object
-  if(!S._trafficExclude) S._trafficExclude = '';
-  const visits = S._trafficExclude
-    ? allVisits.filter(v => (v.username||'(anonymous)') !== S._trafficExclude)
+  // Include filter — show ONLY the selected user; empty = show everyone. Stored on the view-agnostic S object
+  if(!S._trafficFilter) S._trafficFilter = '';
+  const visits = S._trafficFilter
+    ? allVisits.filter(v => (v.username||'(anonymous)') === S._trafficFilter)
     : allVisits;
 
   /* ── date helpers ─────────────────────────────────────── */
@@ -1707,23 +1696,23 @@ function rAdmTraffic(){
   const userRows = Object.values(byUser).sort((a,b)=>b.total-a.total);
 
   const knownUsers = ['All',...userRows.map(u=>u.username)];
-  const excludeDD = `<select class="inp" style="width:auto;min-width:160px" onchange="S._trafficExclude=this.value==='All'?'':this.value;render()">
-    ${knownUsers.map(u=>`<option value="${esc(u)}" ${(S._trafficExclude||'All')===u?'selected':''}>${esc(u==='All'?'Show everyone':u==='(anonymous)'?'(anonymous)':'Exclude: '+u)}</option>`).join('')}
+  const filterDD = `<select class="inp" style="width:auto;min-width:160px" onchange="S._trafficFilter=this.value==='All'?'':this.value;render()">
+    ${knownUsers.map(u=>`<option value="${esc(u)}" ${(S._trafficFilter||'All')===u?'selected':''}>${esc(u==='All'?'Show everyone':u)}</option>`).join('')}
   </select>`;
 
-  const excludeNote = S._trafficExclude
-    ? `<div class="notif" style="background:#FEF3C7;border:1px solid rgba(217,119,6,.2);margin-bottom:12px"><span style="font-size:16px">🙈</span><span style="font-size:13px;color:#92400E;font-weight:600">Excluding <b>${esc(S._trafficExclude)}</b> from all charts and counts.</span></div>`
+  const filterNote = S._trafficFilter
+    ? `<div class="notif" style="background:#EFF6FF;border:1px solid rgba(37,99,235,.2);margin-bottom:12px"><span style="font-size:16px">🔍</span><span style="font-size:13px;color:#1E40AF;font-weight:600">Showing only <b>${esc(S._trafficFilter)}</b> in all charts and counts.</span></div>`
     : '';
 
   return `<div>
   <!-- Filter bar -->
   <div class="card" style="padding:14px 20px;margin-bottom:12px">
     <div class="filter-row">
-      <span class="filter-label">Exclude user:</span>${excludeDD}
-      <span style="font-size:12px;color:#6B7280;margin-left:4px">Use this to filter out your own visits.</span>
+      <span class="filter-label">Show user:</span>${filterDD}
+      <span style="font-size:12px;color:#6B7280;margin-left:4px">Pick a name to see only that person's visits. Choose "Show everyone" to clear.</span>
     </div>
   </div>
-  ${excludeNote}
+  ${filterNote}
   <!-- Summary strip -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
     <div class="card text-center" style="padding:16px"><div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Total Visits</div><div style="font-size:28px;font-weight:900;color:#2563EB">${total}</div></div>
@@ -1774,8 +1763,8 @@ function rAdmTraffic(){
         const bpoCol=bpoColor(u.bpo);
         const bpoBg=bpoBgc(u.bpo);
         const lastSeen = u.lastSeen ? new Date(u.lastSeen).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-        const isExcluded = S._trafficExclude === u.username;
-        return '<tr style="border-bottom:1px solid #F3F4F6;background:'+(isExcluded?'#FFFBEB':i%2?'#FAFAFA':'#fff')+'">'
+        const isSelected = S._trafficFilter === u.username;
+        return '<tr style="border-bottom:1px solid #F3F4F6;background:'+(isSelected?'#EFF6FF':i%2?'#FAFAFA':'#fff')+'">'
           +'<td style="padding:9px 12px;font-weight:700;color:'+(u.username==='(anonymous)'?'#9CA3AF':'#111827')+'">'+esc(u.username)+'</td>'
           +'<td style="padding:9px 12px;font-size:12px;color:#6B7280">'+esc(u.email||'—')+'</td>'
           +'<td style="padding:9px 12px"><span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;background:'+bpoBg+';color:'+bpoCol+'">'+esc(u.bpo)+'</span></td>'
